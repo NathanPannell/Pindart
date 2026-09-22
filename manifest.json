@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Frame to Issue",
+  "version": "0.1.0",
+  "description": "Capture a page region, mark it up, and create a GitHub issue.",
+  "action": {
+    "default_title": "Capture region for GitHub issue",
+    "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png" }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": { "default": "Ctrl+Shift+Y" },
+      "description": "Select a region for an issue"
+    }
+  },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["activeTab", "scripting", "tabs", "storage", "windows", "unlimitedStorage"],
+  "host_permissions": [
+    "https://github.com/*",
+    "https://api.github.com/*",
+    "https://uploads.github.com/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

@@ -1,0 +1,356 @@
+const $ = id => document.getElementById(id);
+const canvas = $("markupCanvas");
+const ctx = canvas.getContext("2d");
+const base = document.createElement("canvas");
+const baseCtx = base.getContext("2d");
+
+let draft;
+let tool = "arrow";
+let strokes = [];
+let currentStroke = null;
+let activePointerId = null;
+let png = "";
+let repositories = [];
+let pollTimer = null;
+let authOpen = false;
+let submitBusy = false;
+
+async function request(type, extra = {}) {
+  const response = await chrome.runtime.sendMessage({ type, ...extra });
+  if (!response?.ok) throw new Error(response?.error || "The extension did not respond.");
+  return response.value;
+}
+
+function setStep(step) {
+  for (const id of ["emptyState", "markupStep", "reportStep", "successStep"]) $(id).hidden = id !== step;
+  $("stepLabel").textContent = ({ emptyState: "Capture", markupStep: "Mark up capture", reportStep: "Issue details", successStep: "Complete" })[step];
+  const heading = $(step).querySelector("h1");
+  if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
+}
+
+function showError(message) {
+  $("formError").textContent = message;
+  $("formError").hidden = false;
+}
+
+function clearError() { $("formError").hidden = true; }
+function showAuthError(message) { $("authError").textContent = message; $("authError").hidden = false; }
+function clearAuthError() { $("authError").hidden = true; }
+function showRepoError(message) { $("repoError").textContent = message; $("repoError").hidden = false; }
+
+async function resizeWindow(width, height) {
+  try {
+    const current = await chrome.windows.getCurrent();
+    await chrome.windows.update(current.id, { width, height });
+  } catch { /* Window managers can refuse a size change. */ }
+}
+
+async function loadDraft() {
+  const { draft: loaded, captureError } = await request("GET_DRAFT");
+  if (!loaded) {
+    $("emptyMessage").textContent = captureError || "Open a webpage, click the extension icon, then drag around the area you want to report.";
+    setStep("emptyState");
+    return;
+  }
+  draft = loaded;
+  $("captureNotice").hidden = !captureError;
+  if (captureError) $("captureNotice").textContent = `${captureError} Your previous capture is still open.`;
+  const image = new Image();
+  image.src = draft.image;
+  await image.decode();
+  const sx = image.naturalWidth / draft.viewport.width;
+  const sy = image.naturalHeight / draft.viewport.height;
+  const left = Math.max(0, Math.min(image.naturalWidth - 1, Math.round(draft.rect.x * sx)));
+  const top = Math.max(0, Math.min(image.naturalHeight - 1, Math.round(draft.rect.y * sy)));
+  const width = Math.max(1, Math.min(image.naturalWidth - left, Math.round(draft.rect.width * sx)));
+  const height = Math.max(1, Math.min(image.naturalHeight - top, Math.round(draft.rect.height * sy)));
+  base.width = canvas.width = width;
+  base.height = canvas.height = height;
+  baseCtx.drawImage(image, left, top, width, height, 0, 0, width, height);
+  const saved = await chrome.storage.local.get("annotations");
+  strokes = saved.annotations?.draftId === draft.id ? saved.annotations.strokes : [];
+  $("captureSize").textContent = `${draft.rect.width} × ${draft.rect.height} px selection`;
+  updateHistoryButtons();
+  render();
+  setStep("markupStep");
+}
+
+function updateHistoryButtons() {
+  $("undoButton").disabled = strokes.length === 0;
+  $("clearButton").disabled = strokes.length === 0;
+}
+
+function saveStrokes() {
+  if (draft) chrome.storage.local.set({ annotations: { draftId: draft.id, strokes } });
+}
+
+function point(event) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: Math.max(0, Math.min(canvas.width, (event.clientX - rect.left) * canvas.width / rect.width)),
+    y: Math.max(0, Math.min(canvas.height, (event.clientY - rect.top) * canvas.height / rect.height)),
+  };
+}
+
+function renderStroke(stroke) {
+  const size = Math.max(3, Math.min(8, canvas.width / 180));
+  ctx.strokeStyle = "#d22f2c";
+  ctx.fillStyle = "#d22f2c";
+  ctx.lineWidth = size;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  const points = stroke.points;
+  if (!points.length) return;
+  if (stroke.type === "pen") {
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+    if (points.length === 1) ctx.lineTo(points[0].x + .01, points[0].y + .01);
+    ctx.stroke();
+  } else {
+    const start = points[0], end = points[points.length - 1];
+    const angle = Math.atan2(end.y - start.y, end.x - start.x);
+    const length = Math.hypot(end.x - start.x, end.y - start.y);
+    if (length < 5) return;
+    const head = Math.min(24, Math.max(12, length * .24));
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(end.x, end.y);
+    ctx.lineTo(end.x - head * Math.cos(angle - Math.PI / 6), end.y - head * Math.sin(angle - Math.PI / 6));
+    ctx.moveTo(end.x, end.y);
+    ctx.lineTo(end.x - head * Math.cos(angle + Math.PI / 6), end.y - head * Math.sin(angle + Math.PI / 6));
+    ctx.stroke();
+  }
+}
+
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(base, 0, 0);
+  for (const stroke of strokes) renderStroke(stroke);
+  if (currentStroke) renderStroke(currentStroke);
+}
+
+function chooseTool(next) {
+  tool = next;
+  for (const name of ["arrow", "pen"]) {
+    const button = $(`${name}Tool`);
+    const active = name === next;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  }
+}
+
+canvas.addEventListener("pointerdown", event => {
+  if (event.button !== 0 || !draft || activePointerId !== null) return;
+  event.preventDefault();
+  activePointerId = event.pointerId;
+  canvas.setPointerCapture(event.pointerId);
+  currentStroke = { type: tool, points: [point(event)] };
+  render();
+});
+canvas.addEventListener("pointermove", event => {
+  if (!currentStroke || event.pointerId !== activePointerId) return;
+  event.preventDefault();
+  const next = point(event);
+  if (tool === "arrow") currentStroke.points[1] = next;
+  else currentStroke.points.push(next);
+  render();
+});
+function finishStroke(event) {
+  if (!currentStroke || event.pointerId !== activePointerId) return;
+  event.preventDefault();
+  const last = point(event);
+  if (currentStroke.type === "arrow") currentStroke.points[1] = last;
+  else currentStroke.points.push(last);
+  strokes.push(currentStroke);
+  currentStroke = null;
+  activePointerId = null;
+  updateHistoryButtons();
+  saveStrokes();
+  render();
+}
+canvas.addEventListener("pointerup", finishStroke);
+canvas.addEventListener("pointercancel", event => {
+  if (event.pointerId !== activePointerId) return;
+  currentStroke = null; activePointerId = null; render();
+});
+$("arrowTool").addEventListener("click", () => chooseTool("arrow"));
+$("penTool").addEventListener("click", () => chooseTool("pen"));
+$("undoButton").addEventListener("click", () => { strokes.pop(); updateHistoryButtons(); saveStrokes(); render(); });
+$("clearButton").addEventListener("click", () => { strokes = []; updateHistoryButtons(); saveStrokes(); render(); });
+document.addEventListener("keydown", event => {
+  if ($("markupStep").hidden) return;
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+    event.preventDefault(); strokes.pop(); updateHistoryButtons(); saveStrokes(); render();
+  } else if (!event.ctrlKey && !event.metaKey && event.key.toLowerCase() === "a") chooseTool("arrow");
+  else if (!event.ctrlKey && !event.metaKey && event.key.toLowerCase() === "p") chooseTool("pen");
+});
+
+async function showReport() {
+  png = canvas.toDataURL("image/png");
+  $("previewImage").style.backgroundImage = `url("${png}")`;
+  $("pageUrl").textContent = draft.url;
+  $("windowSize").textContent = `${draft.windowWidth} × ${draft.windowHeight} px`;
+  $("viewportSize").textContent = `${draft.viewport.width} × ${draft.viewport.height} px`;
+  $("captureTime").textContent = new Date(draft.capturedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "long" });
+  setStep("reportStep");
+  await resizeWindow(760, 820);
+  await refreshAuth();
+}
+$("continueButton").addEventListener("click", () => showReport().catch(error => showError(error.message)));
+$("backButton").addEventListener("click", async () => { setStep("markupStep"); await resizeWindow(1120, 820); });
+
+function updateSubmitEnabled() {
+  $("submitButton").disabled = submitBusy || !repositories.length || !$("repository").value || !$("issueTitle").value.trim();
+  const selected = repositories.find(item => item.full_name === $("repository").value);
+  $("uploadNote").textContent = selected?.private
+    ? "Review sensitive content. People with an attachment link may be able to view it, even from a private issue."
+    : "Screenshot uploads to GitHub before the issue is created.";
+}
+$("repository").addEventListener("change", updateSubmitEnabled);
+$("issueTitle").addEventListener("input", updateSubmitEnabled);
+
+async function refreshAuth() {
+  const status = await request("AUTH_STATUS");
+  clearAuthError();
+  $("signedIn").hidden = !status.authenticated;
+  $("signedOut").hidden = status.authenticated || authOpen;
+  $("deviceFlow").hidden = !authOpen;
+  if (status.authenticated) {
+    authOpen = false;
+    clearTimeout(pollTimer);
+    $("deviceFlow").hidden = true;
+    $("connectedAs").textContent = `Connected as ${status.login}`;
+    try { clearAuthError(); await loadRepositories(); }
+    catch (error) {
+      const latest = await request("AUTH_STATUS");
+      if (!latest.authenticated) {
+        repositories = [];
+        $("signedIn").hidden = true;
+        $("signedOut").hidden = false;
+        $("repository").disabled = true;
+        $("repository").replaceChildren(new Option("Sign in to choose a repository", ""));
+        updateSubmitEnabled();
+      }
+      showAuthError(error.message);
+    }
+  } else {
+    repositories = [];
+    $("repoError").hidden = true;
+    $("repository").disabled = true;
+    $("repository").replaceChildren(new Option("Sign in to choose a repository", ""));
+    updateSubmitEnabled();
+    if (!status.configured) showAuthError("Add a GitHub OAuth client ID to config.js and reload the extension.");
+  }
+}
+
+async function loadRepositories() {
+  repositories = await request("LIST_REPOS");
+  $("repoError").hidden = true;
+  const select = $("repository");
+  const previous = select.value;
+  select.replaceChildren(new Option("Choose a repository", ""));
+  for (const repo of repositories) {
+    const option = new Option(`${repo.full_name}${repo.private ? " · private" : ""}`, repo.full_name);
+    option.dataset.id = String(repo.id);
+    select.add(option);
+  }
+  select.value = repositories.some(repo => repo.full_name === previous) ? previous : "";
+  select.disabled = repositories.length === 0;
+  if (!repositories.length) showRepoError("No repositories with Issues enabled and screenshot attachment access were found.");
+  updateSubmitEnabled();
+}
+
+async function pollAuth(interval) {
+  clearTimeout(pollTimer);
+  pollTimer = setTimeout(async () => {
+    if (!authOpen) return;
+    try {
+      const result = await request("AUTH_POLL");
+      if (result.authenticated) {
+        authOpen = false;
+        $("authWaiting").textContent = "Connected.";
+        await refreshAuth();
+      } else await pollAuth(result.interval || interval);
+    } catch (error) {
+      authOpen = false;
+      $("deviceFlow").hidden = true;
+      $("signedOut").hidden = false;
+      showAuthError(error.message);
+    }
+  }, Math.max(5, interval || 5) * 1000);
+}
+
+$("signInButton").addEventListener("click", async () => {
+  clearAuthError();
+  try {
+    const flow = await request("AUTH_BEGIN");
+    authOpen = true;
+    $("deviceCode").textContent = flow.code;
+    $("authWaiting").textContent = "Waiting for authorization…";
+    $("signedOut").hidden = true;
+    $("deviceFlow").hidden = false;
+    await pollAuth(flow.interval);
+  } catch (error) { showAuthError(error.message); }
+});
+$("openGithubButton").addEventListener("click", () => chrome.tabs.create({ url: "https://github.com/login/device" }));
+$("copyCodeButton").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("deviceCode").textContent); $("copyCodeButton").textContent = "Copied"; }
+  catch { $("copyCodeButton").textContent = "Select code above"; }
+});
+$("cancelAuthButton").addEventListener("click", async () => {
+  clearTimeout(pollTimer); authOpen = false;
+  await request("AUTH_CANCEL");
+  $("deviceFlow").hidden = true; $("signedOut").hidden = false;
+});
+$("signOutButton").addEventListener("click", async () => { await request("AUTH_SIGN_OUT"); await refreshAuth(); });
+
+$("issueForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  if (submitBusy) return;
+  clearError();
+  const repo = repositories.find(item => item.full_name === $("repository").value);
+  if (!repo) { showError("Choose a repository."); return; }
+  submitBusy = true;
+  updateSubmitEnabled();
+  $("submitButton").textContent = "Creating…";
+  try {
+    const result = await request("SUBMIT_ISSUE", {
+      draftId: draft.id,
+      repository: repo.full_name,
+      repositoryId: repo.id,
+      title: $("issueTitle").value,
+      description: $("issueDescription").value,
+      png,
+    });
+    await chrome.storage.local.remove("annotations");
+    $("issueLink").href = result.issueUrl;
+    $("successCopy").textContent = `${repo.full_name} #${result.number} includes your annotated capture and page details.`;
+    setStep("successStep");
+  } catch (error) {
+    const uncertain = error.message.includes("did not confirm");
+    showError(uncertain ? error.message : `${error.message} Your capture and form are still here. Try again.`);
+  } finally {
+    submitBusy = false;
+    $("submitButton").textContent = "Create issue";
+    updateSubmitEnabled();
+  }
+});
+
+$("closeEmpty").addEventListener("click", () => window.close());
+$("doneButton").addEventListener("click", () => window.close());
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.draft?.newValue && changes.draft.newValue.id !== draft?.id) {
+    strokes = []; loadDraft().catch(error => { $("emptyMessage").textContent = error.message; setStep("emptyState"); });
+  }
+  if (area === "local" && changes.captureError) {
+    const error = changes.captureError.newValue;
+    $("captureNotice").hidden = !error;
+    if (error) $("captureNotice").textContent = `${error} Your previous capture is still open.`;
+    if (!draft && error) { $("emptyMessage").textContent = error; setStep("emptyState"); }
+  }
+});
+loadDraft().catch(error => { $("emptyMessage").textContent = error.message; setStep("emptyState"); });

@@ -1,0 +1,15 @@
+{
+  "name": "Frame to Issue",
+  "mode": "operate",
+  "colors": {
+    "paper": "#f1f3f4",
+    "surface": "#ffffff",
+    "ink": "#222629",
+    "muted": "#56616a",
+    "line": "#d3dbe0",
+    "accent": "#cb3833",
+    "success": "#31765b"
+  },
+  "type": { "family": "Segoe UI, ui-sans-serif, system-ui, sans-serif" },
+  "signature": "Open-corner capture frame and consistent red markup/action ink"
+}

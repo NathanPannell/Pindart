@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Frame to Issue</title>
+  <link rel="stylesheet" href="editor.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span>Frame to Issue</span></div>
+    <span id="stepLabel" class="step-label">Mark up capture</span>
+  </header>
+
+  <main>
+    <section id="emptyState" class="empty-state" hidden>
+      <div class="empty-icon" aria-hidden="true"><span></span></div>
+      <h1>No capture yet</h1>
+      <p id="emptyMessage">Open a webpage, click the extension icon, then drag around the area you want to report.</p>
+      <button id="closeEmpty" class="button primary" type="button">Close window</button>
+    </section>
+
+    <section id="markupStep" class="markup-step" hidden>
+      <div class="intro-row">
+        <div>
+          <h1>Show what needs attention.</h1>
+          <p>Draw directly on the capture. Your marks will be attached to the issue.</p>
+        </div>
+        <span id="captureSize" class="capture-size"></span>
+      </div>
+      <p id="captureNotice" class="capture-notice" role="alert" hidden></p>
+
+      <div class="toolbar" role="toolbar" aria-label="Markup tools">
+        <div class="tool-group">
+          <button id="arrowTool" type="button" class="tool active" aria-pressed="true" title="Arrow (A)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20 19 5M10 5h9v9"/></svg><span>Arrow</span>
+          </button>
+          <button id="penTool" type="button" class="tool" aria-pressed="false" title="Draw (P)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 17 11-11 3 3L7 20H4v-3Zm11-11 2-2 3 3-2 2"/></svg><span>Draw</span>
+          </button>
+        </div>
+        <span class="ink-label"><span class="ink-dot"></span> Red ink</span>
+        <div class="tool-group trailing">
+          <button id="undoButton" type="button" class="text-button" disabled>Undo</button>
+          <button id="clearButton" type="button" class="text-button" disabled>Clear marks</button>
+        </div>
+      </div>
+
+      <div class="canvas-shell">
+        <canvas id="markupCanvas" aria-label="Captured webpage region. Use the selected tool to mark it up."></canvas>
+      </div>
+      <footer class="bottom-bar">
+        <span>Tip: press A for arrow, P for draw, Ctrl+Z to undo.</span>
+        <button id="continueButton" class="button primary" type="button">Continue to issue <span aria-hidden="true">→</span></button>
+      </footer>
+    </section>
+
+    <section id="reportStep" class="report-step" hidden>
+      <div class="report-head">
+        <button id="backButton" class="back-button" type="button"><span aria-hidden="true">←</span> Back to markup</button>
+        <h1>Create the issue.</h1>
+        <p>The screenshot and page details will be included in the issue.</p>
+      </div>
+
+      <div class="report-scroll">
+        <div class="capture-summary">
+          <div id="previewImage" role="img" aria-label="Annotated screenshot preview"></div>
+          <div class="capture-details">
+            <strong>Capture details</strong>
+            <dl>
+              <div><dt>Page</dt><dd id="pageUrl"></dd></div>
+              <div><dt>Window</dt><dd id="windowSize"></dd></div>
+              <div><dt>Viewport</dt><dd id="viewportSize"></dd></div>
+              <div><dt>Captured</dt><dd id="captureTime"></dd></div>
+            </dl>
+          </div>
+        </div>
+
+        <div id="authPanel" class="auth-panel">
+          <div id="signedOut" hidden>
+            <strong>Connect GitHub</strong>
+            <p>Sign in once to choose a repository and create an issue.</p>
+            <button id="signInButton" type="button" class="button secondary">Sign in with GitHub</button>
+          </div>
+          <div id="deviceFlow" hidden>
+            <strong>Authorize on GitHub</strong>
+            <p>Enter this code on the GitHub verification page:</p>
+            <div class="code-row"><code id="deviceCode"></code><button id="copyCodeButton" type="button" class="text-button">Copy code</button></div>
+            <div class="auth-actions"><button id="openGithubButton" class="button secondary" type="button">Open GitHub verification</button><button id="cancelAuthButton" class="text-button" type="button">Cancel</button></div>
+            <p id="authWaiting" class="muted">Waiting for authorization…</p>
+          </div>
+          <div id="signedIn" hidden>
+            <span class="connected-dot"></span><strong id="connectedAs"></strong>
+            <button id="signOutButton" type="button" class="text-button">Sign out</button>
+          </div>
+          <p id="authError" class="error" role="alert" hidden></p>
+        </div>
+
+        <form id="issueForm">
+          <label for="repository">Repository</label>
+          <select id="repository" required disabled><option value="">Sign in to choose a repository</option></select>
+          <p class="field-note">Only repositories where you can attach the screenshot are listed.</p>
+          <p id="repoError" class="error" role="alert" hidden></p>
+
+          <label for="issueTitle">Issue title</label>
+          <input id="issueTitle" type="text" maxlength="256" required placeholder="What went wrong?">
+
+          <label for="issueDescription">Description <span class="optional">optional</span></label>
+          <textarea id="issueDescription" rows="5" maxlength="30000" placeholder="What did you expect to see? What happened instead?"></textarea>
+
+        </form>
+      </div>
+      <div class="report-footer">
+        <p id="formError" class="error" role="alert" hidden></p>
+        <div class="submit-row"><span id="uploadNote">Screenshot uploads to GitHub before the issue is created.</span><button id="submitButton" type="submit" form="issueForm" class="button primary" disabled>Create issue</button></div>
+      </div>
+    </section>
+
+    <section id="successStep" class="success-step" hidden>
+      <div class="success-mark" aria-hidden="true">✓</div>
+      <h1>Issue created.</h1>
+      <p id="successCopy"></p>
+      <a id="issueLink" class="button primary" target="_blank" rel="noopener noreferrer">View on GitHub <span aria-hidden="true">↗</span></a>
+      <button id="doneButton" class="text-button" type="button">Done</button>
+    </section>
+  </main>
+  <script type="module" src="editor.js"></script>
+</body>
+</html>
