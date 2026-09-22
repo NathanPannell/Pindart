@@ -63,7 +63,7 @@ export async function getViewer(token) {
 export async function listWritableIssueRepos(token) {
   const repositories = [];
   for (let page = 1; ; page += 1) {
-    const batch = await api(token, `/user/repos?affiliation=owner,collaborator,organization_member&sort=updated&per_page=100&page=${page}`);
+    const batch = await api(token, `/user/repos?affiliation=owner,collaborator,organization_member&sort=updated&direction=desc&per_page=100&page=${page}`);
     repositories.push(...batch.filter(repo => repo.has_issues && !repo.archived && !repo.disabled && repo.permissions?.push));
     if (batch.length < 100) break;
   }
@@ -71,6 +71,7 @@ export async function listWritableIssueRepos(token) {
     id: repo.id,
     full_name: repo.full_name,
     private: repo.private,
+    updated_at: repo.updated_at,
   }));
 }
 

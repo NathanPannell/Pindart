@@ -16,9 +16,11 @@ The first issue requires GitHub sign-in. The extension shows a one-time code and
 1. On a webpage, click the extension icon or press **Ctrl+Shift+Y**.
 2. Drag around the area to report. Press **Esc** to cancel. Chrome captures only the visible page area; browser chrome and other desktop windows are outside the capture.
 3. In the editor window, draw arrows or freehand red marks. Undo or clear as needed.
-4. Continue in the same window. Review the screenshot, URL, dimensions, and timestamp. Sign in if needed, choose a repository, enter a title and optional description, then create the issue.
+4. Continue in the same window. Review the marked-up screenshot beside the issue form, along with the URL, dimensions, and timestamp. Sign in if needed, search or choose a repository, enter a title and optional description, then create the issue.
 
 The repository picker includes public and private repositories where Issues are enabled and your GitHub account can attach the image. GitHub's [official CLI attachment feature](https://docs.github.com/en/github-cli/github-cli/attaching-files-with-github-cli) also requires write access to attach files. The extension requests the OAuth app's `repo` scope so private repositories can be listed and used. This scope is broad because OAuth apps do not provide an issues-only private-repository scope. GitHub organization policies may require an administrator to approve the OAuth app.
+
+Repository search matches owner and repository names. Repositories you have selected or submitted issues to recently appear first, with interaction count breaking ties. Other repositories follow their latest GitHub update time. The recent ranking considers interactions within 90 days, stored locally by GitHub account.
 
 The image is uploaded to GitHub before the issue is created. If upload fails, the form remains open and **no issue is created**. Uploaded media use GitHub attachment URLs, so review the capture for sensitive content before submitting, including when the destination repository is private. See [GitHub's media URL guidance](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-anonymized-urls).
 

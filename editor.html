@@ -63,8 +63,12 @@
       </div>
 
       <div class="report-scroll">
-        <div class="capture-summary">
-          <div id="previewImage" role="img" aria-label="Annotated screenshot preview"></div>
+        <div class="report-grid">
+        <div class="capture-column">
+          <figure class="capture-figure">
+            <div class="capture-caption"><span>Marked-up capture</span><span id="selectionSize"></span></div>
+            <div class="capture-stage"><img id="previewImage" alt="Annotated screenshot that will be attached to the issue"></div>
+          </figure>
           <div class="capture-details">
             <strong>Capture details</strong>
             <dl>
@@ -75,6 +79,8 @@
             </dl>
           </div>
         </div>
+
+        <div class="compose-column">
 
         <div id="authPanel" class="auth-panel">
           <div id="signedOut" hidden>
@@ -97,9 +103,13 @@
         </div>
 
         <form id="issueForm">
-          <label for="repository">Repository</label>
-          <select id="repository" required disabled><option value="">Sign in to choose a repository</option></select>
-          <p class="field-note">Only repositories where you can attach the screenshot are listed.</p>
+          <label for="repositorySearch">Repository</label>
+          <div class="repository-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.5 15.5 5 5"/></svg>
+            <input id="repositorySearch" type="search" autocomplete="off" placeholder="Search owner or repository" aria-describedby="repoSearchStatus" disabled>
+          </div>
+          <select id="repository" aria-label="Matching repositories" aria-describedby="repoSearchStatus" required disabled><option value="">Sign in to choose a repository</option></select>
+          <p id="repoSearchStatus" class="field-note" aria-live="polite">Only repositories where you can attach the screenshot are listed.</p>
           <p id="repoError" class="error" role="alert" hidden></p>
 
           <label for="issueTitle">Issue title</label>
@@ -109,6 +119,8 @@
           <textarea id="issueDescription" rows="5" maxlength="30000" placeholder="What did you expect to see? What happened instead?"></textarea>
 
         </form>
+        </div>
+        </div>
       </div>
       <div class="report-footer">
         <p id="formError" class="error" role="alert" hidden></p>

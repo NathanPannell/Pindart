@@ -9,15 +9,15 @@ test("repository picker includes writable public and private repos with Issues e
   globalThis.fetch = async url => {
     assert.match(url, /\/user\/repos\?/);
     return Response.json([
-      { id: 1, full_name: "team/private", private: true, has_issues: true, archived: false, disabled: false, permissions: { push: true } },
-      { id: 2, full_name: "team/public", private: false, has_issues: true, archived: false, disabled: false, permissions: { push: true } },
+      { id: 1, full_name: "team/private", private: true, updated_at: "2026-09-20T00:00:00Z", has_issues: true, archived: false, disabled: false, permissions: { push: true } },
+      { id: 2, full_name: "team/public", private: false, updated_at: "2026-09-21T00:00:00Z", has_issues: true, archived: false, disabled: false, permissions: { push: true } },
       { id: 3, full_name: "team/read-only", private: false, has_issues: true, archived: false, disabled: false, permissions: { push: false } },
       { id: 4, full_name: "team/no-issues", private: false, has_issues: false, archived: false, disabled: false, permissions: { push: true } },
     ]);
   };
   assert.deepEqual(await listWritableIssueRepos("test-token"), [
-    { id: 1, full_name: "team/private", private: true },
-    { id: 2, full_name: "team/public", private: false },
+    { id: 1, full_name: "team/private", private: true, updated_at: "2026-09-20T00:00:00Z" },
+    { id: 2, full_name: "team/public", private: false, updated_at: "2026-09-21T00:00:00Z" },
   ]);
 });
 

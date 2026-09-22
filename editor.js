@@ -1,3 +1,5 @@
+import { arrangeRepositories, searchRepositories } from "./repositories.js";
+
 const $ = id => document.getElementById(id);
 const canvas = $("markupCanvas");
 const ctx = canvas.getContext("2d");
@@ -11,6 +13,9 @@ let currentStroke = null;
 let activePointerId = null;
 let png = "";
 let repositories = [];
+let repositoryActivity = {};
+let githubLogin = null;
+let activityWrite = Promise.resolve();
 let pollTimer = null;
 let authOpen = false;
 let submitBusy = false;
@@ -191,13 +196,14 @@ document.addEventListener("keydown", event => {
 
 async function showReport() {
   png = canvas.toDataURL("image/png");
-  $("previewImage").style.backgroundImage = `url("${png}")`;
+  $("previewImage").src = png;
+  $("selectionSize").textContent = `${canvas.width} × ${canvas.height} px`;
   $("pageUrl").textContent = draft.url;
   $("windowSize").textContent = `${draft.windowWidth} × ${draft.windowHeight} px`;
   $("viewportSize").textContent = `${draft.viewport.width} × ${draft.viewport.height} px`;
   $("captureTime").textContent = new Date(draft.capturedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "long" });
   setStep("reportStep");
-  await resizeWindow(760, 820);
+  await resizeWindow(1000, 820);
   await refreshAuth();
 }
 $("continueButton").addEventListener("click", () => showReport().catch(error => showError(error.message)));
@@ -207,14 +213,71 @@ function updateSubmitEnabled() {
   $("submitButton").disabled = submitBusy || !repositories.length || !$("repository").value || !$("issueTitle").value.trim();
   const selected = repositories.find(item => item.full_name === $("repository").value);
   $("uploadNote").textContent = selected?.private
-    ? "Review sensitive content. People with an attachment link may be able to view it, even from a private issue."
+    ? "Anyone with the attachment link may view this image."
     : "Screenshot uploads to GitHub before the issue is created.";
 }
-$("repository").addEventListener("change", updateSubmitEnabled);
+function recordRepositoryInteraction(repo, kind) {
+  const login = githubLogin;
+  if (!login || !repo) return Promise.resolve();
+  activityWrite = activityWrite.catch(() => {}).then(async () => {
+    const { repoActivityByLogin = {} } = await chrome.storage.local.get("repoActivityByLogin");
+    const account = { ...(repoActivityByLogin[login] || {}) };
+    const record = { ...(account[String(repo.id)] || {}) };
+    if (kind === "submitted") {
+      record.submissions = (record.submissions || 0) + 1;
+      record.lastSubmittedAt = Date.now();
+    } else {
+      record.selections = (record.selections || 0) + 1;
+      record.lastSelectedAt = Date.now();
+    }
+    account[String(repo.id)] = record;
+    await chrome.storage.local.set({ repoActivityByLogin: { ...repoActivityByLogin, [login]: account } });
+    if (githubLogin === login) repositoryActivity = account;
+  });
+  return activityWrite;
+}
+
+function renderRepositoryOptions() {
+  const select = $("repository");
+  const previous = select.value;
+  const ordered = arrangeRepositories(repositories, repositoryActivity);
+  const query = $("repositorySearch").value;
+  const recent = searchRepositories(ordered.recent, query);
+  const updated = searchRepositories(ordered.updated, query);
+  const visible = [...recent, ...updated];
+  select.replaceChildren(new Option(visible.length ? "Choose a repository" : "No matching repositories", ""));
+  for (const [label, group] of [["Your recent picks", recent], ["Recently updated on GitHub", updated]]) {
+    if (!group.length) continue;
+    const options = document.createElement("optgroup");
+    options.label = label;
+    for (const repo of group) {
+      const option = new Option(`${repo.full_name}${repo.private ? " · private" : ""}`, repo.full_name);
+      option.dataset.id = String(repo.id);
+      options.append(option);
+    }
+    select.append(options);
+  }
+  select.value = visible.some(repo => repo.full_name === previous) ? previous : "";
+  select.disabled = visible.length === 0;
+  $("repoSearchStatus").textContent = visible.length
+    ? `${visible.length} ${visible.length === 1 ? "repository" : "repositories"} available. Recent picks appear first, then recently updated repositories.`
+    : query.trim() ? `No repositories match “${query.trim()}”. Try another owner or name.`
+    : "No repositories are available to search.";
+  updateSubmitEnabled();
+}
+
+$("repositorySearch").addEventListener("input", renderRepositoryOptions);
+$("repository").addEventListener("change", () => {
+  updateSubmitEnabled();
+  const repo = repositories.find(item => item.full_name === $("repository").value);
+  if (repo) recordRepositoryInteraction(repo, "selected").catch(() => {});
+});
 $("issueTitle").addEventListener("input", updateSubmitEnabled);
 
 async function refreshAuth() {
   const status = await request("AUTH_STATUS");
+  githubLogin = status.authenticated ? status.login : null;
+  $("authPanel").classList.toggle("connected", status.authenticated);
   clearAuthError();
   $("signedIn").hidden = !status.authenticated;
   $("signedOut").hidden = status.authenticated || authOpen;
@@ -229,8 +292,11 @@ async function refreshAuth() {
       const latest = await request("AUTH_STATUS");
       if (!latest.authenticated) {
         repositories = [];
+        githubLogin = null;
+        $("authPanel").classList.remove("connected");
         $("signedIn").hidden = true;
         $("signedOut").hidden = false;
+        $("repositorySearch").disabled = true;
         $("repository").disabled = true;
         $("repository").replaceChildren(new Option("Sign in to choose a repository", ""));
         updateSubmitEnabled();
@@ -239,7 +305,11 @@ async function refreshAuth() {
     }
   } else {
     repositories = [];
+    repositoryActivity = {};
     $("repoError").hidden = true;
+    $("repositorySearch").disabled = true;
+    $("repositorySearch").value = "";
+    $("repoSearchStatus").textContent = "Sign in to search your repositories.";
     $("repository").disabled = true;
     $("repository").replaceChildren(new Option("Sign in to choose a repository", ""));
     updateSubmitEnabled();
@@ -248,20 +318,15 @@ async function refreshAuth() {
 }
 
 async function loadRepositories() {
+  $("repositorySearch").disabled = true;
+  $("repoSearchStatus").textContent = "Loading repositories…";
   repositories = await request("LIST_REPOS");
+  const { repoActivityByLogin = {} } = await chrome.storage.local.get("repoActivityByLogin");
+  repositoryActivity = repoActivityByLogin[githubLogin] || {};
   $("repoError").hidden = true;
-  const select = $("repository");
-  const previous = select.value;
-  select.replaceChildren(new Option("Choose a repository", ""));
-  for (const repo of repositories) {
-    const option = new Option(`${repo.full_name}${repo.private ? " · private" : ""}`, repo.full_name);
-    option.dataset.id = String(repo.id);
-    select.add(option);
-  }
-  select.value = repositories.some(repo => repo.full_name === previous) ? previous : "";
-  select.disabled = repositories.length === 0;
+  $("repositorySearch").disabled = repositories.length === 0;
+  renderRepositoryOptions();
   if (!repositories.length) showRepoError("No repositories with Issues enabled and screenshot attachment access were found.");
-  updateSubmitEnabled();
 }
 
 async function pollAuth(interval) {
@@ -326,6 +391,7 @@ $("issueForm").addEventListener("submit", async event => {
       description: $("issueDescription").value,
       png,
     });
+    await recordRepositoryInteraction(repo, "submitted").catch(() => {});
     await chrome.storage.local.remove("annotations");
     $("issueLink").href = result.issueUrl;
     $("successCopy").textContent = `${repo.full_name} #${result.number} includes your annotated capture and page details.`;
