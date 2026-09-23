@@ -1,14 +1,8 @@
-import { GITHUB_CLIENT_ID } from "./config.js";
-
 const API = "https://api.github.com";
 const HEADERS = {
   Accept: "application/vnd.github+json",
   "X-GitHub-Api-Version": "2022-11-28",
 };
-
-export function isConfigured() {
-  return /^[A-Za-z0-9_]{8,}$/.test(GITHUB_CLIENT_ID) && !GITHUB_CLIENT_ID.startsWith("PASTE_");
-}
 
 async function jsonResponse(response) {
   let data;
@@ -32,28 +26,6 @@ async function api(token, path, options = {}) {
       ...options.headers,
     },
   }));
-}
-
-export async function beginDeviceFlow() {
-  if (!isConfigured()) throw new Error("Add your GitHub OAuth client ID to config.js, then reload the extension.");
-  return jsonResponse(await fetch("https://github.com/login/device/code", {
-    method: "POST",
-    headers: { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ client_id: GITHUB_CLIENT_ID, scope: "repo" }),
-  }));
-}
-
-export async function pollDeviceFlow(deviceCode) {
-  const response = await fetch("https://github.com/login/oauth/access_token", {
-    method: "POST",
-    headers: { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: GITHUB_CLIENT_ID,
-      device_code: deviceCode,
-      grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-    }),
-  });
-  return jsonResponse(response);
 }
 
 export async function getViewer(token) {

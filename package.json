@@ -4,6 +4,6 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "check": "node --check background.js && node --check config.js && node --check editor.js && node --check github.js && node --check repositories.js && node --check select.js"
+    "check": "node --check auth-flow.js && node --check background.js && node --check config.js && node --check editor.js && node --check github.js && node --check repositories.js && node --check select.js"
   }
 }

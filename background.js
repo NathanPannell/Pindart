@@ -1,9 +1,75 @@
 import {
-  beginDeviceFlow, pollDeviceFlow, getViewer, listWritableIssueRepos,
-  uploadImage, issueBody, createIssue, findIssueByMarker, isConfigured,
+  getViewer, listWritableIssueRepos, uploadImage, issueBody, createIssue, findIssueByMarker,
 } from "./github.js";
+import { isAuthConfigured, signInWithGithub, refreshGithubToken } from "./auth-flow.js";
 
 let submitting = false;
+let signingIn = false;
+let authEpoch = 0;
+let tokenRefreshJob = null;
+let authWriteQueue = Promise.resolve();
+
+chrome.storage.local.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
+
+function writeAuth(operation) {
+  const job = authWriteQueue.catch(() => {}).then(operation);
+  authWriteQueue = job.catch(() => {});
+  return job;
+}
+
+async function getGithubToken(forceRefresh = false) {
+  const epoch = authEpoch;
+  const { githubToken, githubRefreshToken, githubExpiresAt } = await chrome.storage.local.get([
+    "githubToken", "githubRefreshToken", "githubExpiresAt",
+  ]);
+  if (epoch !== authEpoch) return getGithubToken(forceRefresh);
+  if (!githubToken) throw new Error("Sign in to GitHub first.");
+  if (!forceRefresh && (!githubExpiresAt || Date.now() < githubExpiresAt - 60_000)) return githubToken;
+  if (!githubRefreshToken) {
+    await writeAuth(async () => {
+      if (epoch !== authEpoch) return;
+      const current = await chrome.storage.local.get("githubToken");
+      if (current.githubToken === githubToken) await chrome.storage.local.remove(["githubToken", "githubLogin", "githubExpiresAt"]);
+    });
+    throw new Error("Your GitHub session expired. Sign in again.");
+  }
+  if (!tokenRefreshJob || tokenRefreshJob.epoch !== epoch || tokenRefreshJob.refreshToken !== githubRefreshToken) {
+    const promise = (async () => {
+      try {
+        const session = await refreshGithubToken(githubRefreshToken);
+        if (epoch !== authEpoch) throw new Error("GitHub sign-in was canceled.");
+        await writeAuth(async () => {
+          if (epoch !== authEpoch) throw new Error("GitHub sign-in was canceled.");
+          await chrome.storage.local.set({
+            githubToken: session.accessToken,
+            githubRefreshToken: session.refreshToken,
+            githubExpiresAt: session.expiresAt,
+          });
+        });
+        return session.accessToken;
+      } catch (error) {
+        if (error.status === 400 || error.status === 401) {
+          const current = await chrome.storage.local.get("githubRefreshToken");
+          if (epoch === authEpoch && current.githubRefreshToken !== githubRefreshToken) return getGithubToken();
+          await writeAuth(async () => {
+            if (epoch !== authEpoch) return;
+            const latest = await chrome.storage.local.get("githubRefreshToken");
+            if (latest.githubRefreshToken === githubRefreshToken) {
+              await chrome.storage.local.remove(["githubToken", "githubLogin", "githubRefreshToken", "githubExpiresAt"]);
+            }
+          });
+          throw new Error("Your GitHub session expired. Sign in again.");
+        }
+        throw error;
+      }
+    })();
+    tokenRefreshJob = { epoch, refreshToken: githubRefreshToken, promise };
+    promise.finally(() => {
+      if (tokenRefreshJob?.promise === promise) tokenRefreshJob = null;
+    }).catch(() => {});
+  }
+  return tokenRefreshJob.promise;
+}
 
 chrome.action.onClicked.addListener(async tab => {
   if (!tab.id || !tab.windowId) return;
@@ -69,8 +135,8 @@ async function captureRegion(message, sender) {
     windowHeight: pendingCapture.windowHeight,
     capturedAt: pendingCapture.capturedAt,
   };
+  await chrome.storage.local.remove(["captureError", "uploadedAttachment", "submissionUncertain", "annotations", "formDraft"]);
   await chrome.storage.local.set({ draft });
-  await chrome.storage.local.remove(["captureError", "uploadedAttachment", "submissionUncertain"]);
   await chrome.storage.session.remove("pendingCapture");
   await openEditor();
   return { ok: true };
@@ -78,59 +144,55 @@ async function captureRegion(message, sender) {
 
 async function authenticate(message) {
   if (message.type === "AUTH_BEGIN") {
-    const flow = await beginDeviceFlow();
-    await chrome.storage.session.set({ authFlow: {
-      deviceCode: flow.device_code,
-      expiresAt: Date.now() + flow.expires_in * 1000,
-      interval: Math.max(5, flow.interval || 5),
-      nextPollAt: Date.now() + Math.max(5, flow.interval || 5) * 1000,
-    } });
-    return { code: flow.user_code, uri: flow.verification_uri, interval: flow.interval, expiresIn: flow.expires_in };
-  }
-  if (message.type === "AUTH_POLL") {
-    const { authFlow } = await chrome.storage.session.get("authFlow");
-    if (!authFlow) throw new Error("Start GitHub sign-in again.");
-    if (Date.now() >= authFlow.expiresAt) {
-      await chrome.storage.session.remove("authFlow");
-      throw new Error("Sign-in code expired. Start again.");
-    }
-    if (Date.now() < authFlow.nextPollAt) return { pending: true, interval: authFlow.interval };
-    const result = await pollDeviceFlow(authFlow.deviceCode);
-    if (result.access_token) {
-      if (!result.scope?.split(",").includes("repo")) throw new Error("GitHub did not grant repository access.");
-      const viewer = await getViewer(result.access_token);
-      await chrome.storage.local.set({ githubToken: result.access_token, githubLogin: viewer.login });
-      await chrome.storage.session.remove("authFlow");
+    if (signingIn) throw new Error("GitHub sign-in is already open.");
+    signingIn = true;
+    authEpoch += 1;
+    tokenRefreshJob = null;
+    const epoch = authEpoch;
+    try {
+      const session = await signInWithGithub();
+      if (epoch !== authEpoch) throw new Error("GitHub sign-in was canceled.");
+      const viewer = await getViewer(session.accessToken);
+      if (epoch !== authEpoch) throw new Error("GitHub sign-in was canceled.");
+      await writeAuth(async () => {
+        if (epoch !== authEpoch) throw new Error("GitHub sign-in was canceled.");
+        await chrome.storage.local.set({
+          githubToken: session.accessToken,
+          githubLogin: viewer.login,
+          githubRefreshToken: session.refreshToken,
+          githubExpiresAt: session.expiresAt,
+        });
+      });
       return { authenticated: true, login: viewer.login };
-    }
-    if (result.error === "slow_down") authFlow.interval += 5;
-    else if (result.error && result.error !== "authorization_pending") {
-      await chrome.storage.session.remove("authFlow");
-      throw new Error(result.error_description || result.error);
-    }
-    authFlow.nextPollAt = Date.now() + authFlow.interval * 1000;
-    await chrome.storage.session.set({ authFlow });
-    return { pending: true, interval: authFlow.interval };
-  }
-  if (message.type === "AUTH_CANCEL") {
-    await chrome.storage.session.remove("authFlow");
-    return { ok: true };
+    } finally { signingIn = false; }
   }
   if (message.type === "AUTH_SIGN_OUT") {
-    await chrome.storage.local.remove(["githubToken", "githubLogin"]);
-    await chrome.storage.session.remove("authFlow");
+    authEpoch += 1;
+    tokenRefreshJob = null;
+    await writeAuth(() => chrome.storage.local.remove(["githubToken", "githubLogin", "githubRefreshToken", "githubExpiresAt"]));
     return { ok: true };
   }
   const { githubToken, githubLogin } = await chrome.storage.local.get(["githubToken", "githubLogin"]);
-  return { configured: isConfigured(), authenticated: Boolean(githubToken), login: githubLogin || null };
+  return { configured: isAuthConfigured(), authenticated: Boolean(githubToken), login: githubLogin || null };
 }
 
 async function listRepositories() {
-  const { githubToken } = await chrome.storage.local.get("githubToken");
-  if (!githubToken) throw new Error("Sign in to GitHub first.");
-  try { return await listWritableIssueRepos(githubToken); }
+  const token = await getGithubToken();
+  try { return await listWritableIssueRepos(token); }
   catch (error) {
-    if (error.status === 401) await chrome.storage.local.remove(["githubToken", "githubLogin"]);
+    if (error.status === 401) {
+      const renewed = await getGithubToken(true);
+      const epoch = authEpoch;
+      try { return await listWritableIssueRepos(renewed); }
+      catch (retriedError) {
+        if (retriedError.status === 401) await writeAuth(async () => {
+          if (epoch !== authEpoch) return;
+          const current = await chrome.storage.local.get("githubToken");
+          if (current.githubToken === renewed) await chrome.storage.local.remove(["githubToken", "githubLogin", "githubRefreshToken", "githubExpiresAt"]);
+        });
+        throw retriedError;
+      }
+    }
     throw error;
   }
 }
@@ -139,21 +201,22 @@ async function submitIssue(message) {
   if (submitting) throw new Error("An issue is already being submitted.");
   submitting = true;
   try {
-    const { githubToken, draft } = await chrome.storage.local.get(["githubToken", "draft"]);
-    if (!githubToken) throw new Error("Sign in to GitHub first.");
+    const { draft } = await chrome.storage.local.get("draft");
+    let githubToken = await getGithubToken();
     if (!draft || draft.id !== message.draftId) throw new Error("The capture changed. Review the current screenshot.");
     const title = String(message.title || "").trim();
     const description = String(message.description || "").trim();
     if (!title || title.length > 256) throw new Error("Enter an issue title of 1 to 256 characters.");
     if (description.length > 30000) throw new Error("Shorten the issue description.");
-    const repositories = await listWritableIssueRepos(githubToken);
+    const repositories = await listRepositories();
     const repository = repositories.find(repo => repo.id === message.repositoryId && repo.full_name === message.repository);
     if (!repository) throw new Error("Choose a repository where you can attach screenshots.");
     const { submissionUncertain } = await chrome.storage.local.get("submissionUncertain");
     if (submissionUncertain?.draftId === draft.id) {
+      githubToken = await getGithubToken();
       const existing = await findIssueByMarker(githubToken, submissionUncertain.repository, submissionUncertain.marker);
       if (existing) {
-        await chrome.storage.local.remove(["draft", "uploadedAttachment", "submissionUncertain"]);
+        await chrome.storage.local.remove(["draft", "formDraft", "uploadedAttachment", "submissionUncertain"]);
         return { issueUrl: existing.html_url, number: existing.number };
       }
       throw new Error("GitHub did not confirm whether the previous issue was created. Check the repository's issues before starting a new capture.");
@@ -164,6 +227,7 @@ async function submitIssue(message) {
     let imageUrl = uploadedAttachment?.draftId === draft.id && uploadedAttachment?.repositoryId === repository.id && uploadedAttachment?.imageHash === imageHash
       ? uploadedAttachment.url : null;
     if (!imageUrl) {
+      githubToken = await getGithubToken();
       imageUrl = await uploadImage(githubToken, repository.id, message.png);
       await chrome.storage.local.set({ uploadedAttachment: { draftId: draft.id, repositoryId: repository.id, imageHash, url: imageUrl } });
     }
@@ -179,7 +243,10 @@ async function submitIssue(message) {
       imageUrl,
     }) + `\n\n${marker}`;
     let issue;
-    try { issue = await createIssue(githubToken, repository.full_name, title, body); }
+    try {
+      githubToken = await getGithubToken();
+      issue = await createIssue(githubToken, repository.full_name, title, body);
+    }
     catch (error) {
       if (!error.status || error.status >= 500) {
         await chrome.storage.local.set({ submissionUncertain: { draftId: draft.id, repository: repository.full_name, marker } });
@@ -188,7 +255,7 @@ async function submitIssue(message) {
         if (!issue) throw new Error("GitHub did not confirm the issue creation. Check the repository's issues before trying again.");
       } else throw error;
     }
-    await chrome.storage.local.remove(["draft", "uploadedAttachment", "submissionUncertain"]);
+    await chrome.storage.local.remove(["draft", "formDraft", "uploadedAttachment", "submissionUncertain"]);
     return { issueUrl: issue.html_url, number: issue.number };
   } finally { submitting = false; }
 }

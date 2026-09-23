@@ -16,9 +16,55 @@ let repositories = [];
 let repositoryActivity = {};
 let githubLogin = null;
 let activityWrite = Promise.resolve();
-let pollTimer = null;
 let authOpen = false;
 let submitBusy = false;
+let pendingRepository = "";
+let formSaveTimer;
+let lastPointerActivityAt = 0;
+let idleWarningTimer;
+let idleCloseTimer;
+let idleCountdownTimer;
+let idleDeadline = 0;
+
+async function closeEditorWindow() {
+  try {
+    const current = await chrome.windows.getCurrent();
+    if (current.type === "popup") { await chrome.windows.remove(current.id); return; }
+  } catch { /* Fall back to the window close below. */ }
+  window.close();
+}
+
+function pauseIdleClock() {
+  clearTimeout(idleWarningTimer);
+  clearTimeout(idleCloseTimer);
+  clearInterval(idleCountdownTimer);
+  $("idleNotice").hidden = true;
+}
+
+function resetIdleClock() {
+  pauseIdleClock();
+  if (authOpen || submitBusy) return;
+  idleDeadline = Date.now() + 60_000;
+  idleWarningTimer = setTimeout(() => {
+    const updateNotice = () => {
+      const remaining = Math.max(0, Math.ceil((idleDeadline - Date.now()) / 1000));
+      $("idleNotice").textContent = `Closing in ${remaining} seconds due to inactivity`;
+    };
+    updateNotice();
+    $("idleNotice").hidden = false;
+    idleCountdownTimer = setInterval(updateNotice, 1000);
+  }, 45_000);
+  idleCloseTimer = setTimeout(closeEditorWindow, 60_000);
+}
+
+for (const eventName of ["pointerdown", "keydown", "input", "wheel", "touchstart"]) {
+  document.addEventListener(eventName, resetIdleClock, { passive: true });
+}
+document.addEventListener("pointermove", () => {
+  if (Date.now() - lastPointerActivityAt < 10_000) return;
+  lastPointerActivityAt = Date.now();
+  resetIdleClock();
+}, { passive: true });
 
 async function request(type, extra = {}) {
   const response = await chrome.runtime.sendMessage({ type, ...extra });
@@ -56,6 +102,17 @@ async function loadDraft() {
     $("emptyMessage").textContent = captureError || "Open a webpage, click the extension icon, then drag around the area you want to report.";
     setStep("emptyState");
     return;
+  }
+  if (loaded.id !== draft?.id) {
+    resetCaptureForm();
+    const { formDraft } = await chrome.storage.local.get("formDraft");
+    if (formDraft?.draftId === loaded.id) {
+      $("issueTitle").value = formDraft.title || "";
+      $("issueDescription").value = formDraft.description || "";
+      $("repositorySearch").value = formDraft.search || "";
+      pendingRepository = formDraft.repository || "";
+      updateSubmitEnabled();
+    } else if (formDraft) await chrome.storage.local.remove("formDraft");
   }
   draft = loaded;
   $("captureNotice").hidden = !captureError;
@@ -158,6 +215,7 @@ canvas.addEventListener("pointerdown", event => {
 });
 canvas.addEventListener("pointermove", event => {
   if (!currentStroke || event.pointerId !== activePointerId) return;
+  resetIdleClock();
   event.preventDefault();
   const next = point(event);
   if (tool === "arrow") currentStroke.points[1] = next;
@@ -237,9 +295,38 @@ function recordRepositoryInteraction(repo, kind) {
   return activityWrite;
 }
 
+function resetCaptureForm() {
+  clearTimeout(formSaveTimer);
+  pendingRepository = "";
+  $("issueForm").reset();
+  $("repositorySearch").value = "";
+  $("repository").value = "";
+  $("previewImage").removeAttribute("src");
+  $("repoError").hidden = true;
+  $("formError").hidden = true;
+  $("captureNotice").hidden = true;
+  png = "";
+  if (repositories.length) renderRepositoryOptions();
+  updateSubmitEnabled();
+  resetIdleClock();
+}
+
+function saveFormDraft() {
+  clearTimeout(formSaveTimer);
+  if (!draft) return;
+  const draftId = draft.id;
+  formSaveTimer = setTimeout(() => chrome.storage.local.set({ formDraft: {
+    draftId,
+    title: $("issueTitle").value,
+    description: $("issueDescription").value,
+    search: $("repositorySearch").value,
+    repository: $("repository").value,
+  } }), 150);
+}
+
 function renderRepositoryOptions() {
   const select = $("repository");
-  const previous = select.value;
+  const previous = select.value || pendingRepository;
   const ordered = arrangeRepositories(repositories, repositoryActivity);
   const query = $("repositorySearch").value;
   const recent = searchRepositories(ordered.recent, query);
@@ -258,6 +345,7 @@ function renderRepositoryOptions() {
     select.append(options);
   }
   select.value = visible.some(repo => repo.full_name === previous) ? previous : "";
+  if (select.value) pendingRepository = "";
   select.disabled = visible.length === 0;
   $("repoSearchStatus").textContent = visible.length
     ? `${visible.length} ${visible.length === 1 ? "repository" : "repositories"} available. Recent picks appear first, then recently updated repositories.`
@@ -266,13 +354,15 @@ function renderRepositoryOptions() {
   updateSubmitEnabled();
 }
 
-$("repositorySearch").addEventListener("input", renderRepositoryOptions);
+$("repositorySearch").addEventListener("input", () => { renderRepositoryOptions(); saveFormDraft(); });
 $("repository").addEventListener("change", () => {
   updateSubmitEnabled();
+  saveFormDraft();
   const repo = repositories.find(item => item.full_name === $("repository").value);
   if (repo) recordRepositoryInteraction(repo, "selected").catch(() => {});
 });
-$("issueTitle").addEventListener("input", updateSubmitEnabled);
+$("issueTitle").addEventListener("input", () => { updateSubmitEnabled(); saveFormDraft(); });
+$("issueDescription").addEventListener("input", saveFormDraft);
 
 async function refreshAuth() {
   const status = await request("AUTH_STATUS");
@@ -281,12 +371,11 @@ async function refreshAuth() {
   clearAuthError();
   $("signedIn").hidden = !status.authenticated;
   $("signedOut").hidden = status.authenticated || authOpen;
-  $("deviceFlow").hidden = !authOpen;
+  $("authProgress").hidden = !authOpen;
   if (status.authenticated) {
     authOpen = false;
-    clearTimeout(pollTimer);
-    $("deviceFlow").hidden = true;
-    $("connectedAs").textContent = `Connected as ${status.login}`;
+    $("authProgress").hidden = true;
+    $("connectedAs").textContent = `@${status.login}`;
     try { clearAuthError(); await loadRepositories(); }
     catch (error) {
       const latest = await request("AUTH_STATUS");
@@ -313,7 +402,7 @@ async function refreshAuth() {
     $("repository").disabled = true;
     $("repository").replaceChildren(new Option("Sign in to choose a repository", ""));
     updateSubmitEnabled();
-    if (!status.configured) showAuthError("Add a GitHub OAuth client ID to config.js and reload the extension.");
+    if (!status.configured) showAuthError("The sign-in service is not configured in this build.");
   }
 }
 
@@ -329,47 +418,28 @@ async function loadRepositories() {
   if (!repositories.length) showRepoError("No repositories with Issues enabled and screenshot attachment access were found.");
 }
 
-async function pollAuth(interval) {
-  clearTimeout(pollTimer);
-  pollTimer = setTimeout(async () => {
-    if (!authOpen) return;
-    try {
-      const result = await request("AUTH_POLL");
-      if (result.authenticated) {
-        authOpen = false;
-        $("authWaiting").textContent = "Connected.";
-        await refreshAuth();
-      } else await pollAuth(result.interval || interval);
-    } catch (error) {
-      authOpen = false;
-      $("deviceFlow").hidden = true;
-      $("signedOut").hidden = false;
-      showAuthError(error.message);
-    }
-  }, Math.max(5, interval || 5) * 1000);
-}
-
 $("signInButton").addEventListener("click", async () => {
+  if (authOpen) return;
   clearAuthError();
+  authOpen = true;
+  pauseIdleClock();
+  $("signInButton").disabled = true;
+  $("signedOut").hidden = true;
+  $("authProgress").textContent = "Continue in the GitHub window to connect your account…";
+  $("authProgress").hidden = false;
   try {
-    const flow = await request("AUTH_BEGIN");
-    authOpen = true;
-    $("deviceCode").textContent = flow.code;
-    $("authWaiting").textContent = "Waiting for authorization…";
-    $("signedOut").hidden = true;
-    $("deviceFlow").hidden = false;
-    await pollAuth(flow.interval);
-  } catch (error) { showAuthError(error.message); }
-});
-$("openGithubButton").addEventListener("click", () => chrome.tabs.create({ url: "https://github.com/login/device" }));
-$("copyCodeButton").addEventListener("click", async () => {
-  try { await navigator.clipboard.writeText($("deviceCode").textContent); $("copyCodeButton").textContent = "Copied"; }
-  catch { $("copyCodeButton").textContent = "Select code above"; }
-});
-$("cancelAuthButton").addEventListener("click", async () => {
-  clearTimeout(pollTimer); authOpen = false;
-  await request("AUTH_CANCEL");
-  $("deviceFlow").hidden = true; $("signedOut").hidden = false;
+    await request("AUTH_BEGIN");
+    authOpen = false;
+    await refreshAuth();
+  } catch (error) {
+    authOpen = false;
+    $("authProgress").hidden = true;
+    $("signedOut").hidden = false;
+    showAuthError(error.message);
+  } finally {
+    $("signInButton").disabled = false;
+    resetIdleClock();
+  }
 });
 $("signOutButton").addEventListener("click", async () => { await request("AUTH_SIGN_OUT"); await refreshAuth(); });
 
@@ -380,6 +450,7 @@ $("issueForm").addEventListener("submit", async event => {
   const repo = repositories.find(item => item.full_name === $("repository").value);
   if (!repo) { showError("Choose a repository."); return; }
   submitBusy = true;
+  pauseIdleClock();
   updateSubmitEnabled();
   $("submitButton").textContent = "Creating…";
   try {
@@ -392,7 +463,8 @@ $("issueForm").addEventListener("submit", async event => {
       png,
     });
     await recordRepositoryInteraction(repo, "submitted").catch(() => {});
-    await chrome.storage.local.remove("annotations");
+    clearTimeout(formSaveTimer);
+    await chrome.storage.local.remove(["annotations", "formDraft"]);
     $("issueLink").href = result.issueUrl;
     $("successCopy").textContent = `${repo.full_name} #${result.number} includes your annotated capture and page details.`;
     setStep("successStep");
@@ -403,11 +475,12 @@ $("issueForm").addEventListener("submit", async event => {
     submitBusy = false;
     $("submitButton").textContent = "Create issue";
     updateSubmitEnabled();
+    resetIdleClock();
   }
 });
 
-$("closeEmpty").addEventListener("click", () => window.close());
-$("doneButton").addEventListener("click", () => window.close());
+$("closeEmpty").addEventListener("click", closeEditorWindow);
+$("doneButton").addEventListener("click", closeEditorWindow);
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && changes.draft?.newValue && changes.draft.newValue.id !== draft?.id) {
     strokes = []; loadDraft().catch(error => { $("emptyMessage").textContent = error.message; setStep("emptyState"); });
@@ -419,4 +492,5 @@ chrome.storage.onChanged.addListener((changes, area) => {
     if (!draft && error) { $("emptyMessage").textContent = error; setStep("emptyState"); }
   }
 });
+resetIdleClock();
 loadDraft().catch(error => { $("emptyMessage").textContent = error.message; setStep("emptyState"); });

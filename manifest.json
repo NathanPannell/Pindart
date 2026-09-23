@@ -20,11 +20,12 @@
     }
   },
   "background": { "service_worker": "background.js", "type": "module" },
-  "permissions": ["activeTab", "scripting", "tabs", "storage", "windows", "unlimitedStorage"],
+  "permissions": ["activeTab", "scripting", "tabs", "storage", "windows", "identity", "unlimitedStorage"],
   "host_permissions": [
     "https://github.com/*",
     "https://api.github.com/*",
-    "https://uploads.github.com/*"
+    "https://uploads.github.com/*",
+    "https://api-production-2e11d.up.railway.app/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
