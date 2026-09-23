@@ -20,11 +20,6 @@ let authOpen = false;
 let submitBusy = false;
 let pendingRepository = "";
 let formSaveTimer;
-let lastPointerActivityAt = 0;
-let idleWarningTimer;
-let idleCloseTimer;
-let idleCountdownTimer;
-let idleDeadline = 0;
 
 async function closeEditorWindow() {
   try {
@@ -33,38 +28,6 @@ async function closeEditorWindow() {
   } catch { /* Fall back to the window close below. */ }
   window.close();
 }
-
-function pauseIdleClock() {
-  clearTimeout(idleWarningTimer);
-  clearTimeout(idleCloseTimer);
-  clearInterval(idleCountdownTimer);
-  $("idleNotice").hidden = true;
-}
-
-function resetIdleClock() {
-  pauseIdleClock();
-  if (authOpen || submitBusy) return;
-  idleDeadline = Date.now() + 60_000;
-  idleWarningTimer = setTimeout(() => {
-    const updateNotice = () => {
-      const remaining = Math.max(0, Math.ceil((idleDeadline - Date.now()) / 1000));
-      $("idleNotice").textContent = `Closing in ${remaining} seconds due to inactivity`;
-    };
-    updateNotice();
-    $("idleNotice").hidden = false;
-    idleCountdownTimer = setInterval(updateNotice, 1000);
-  }, 45_000);
-  idleCloseTimer = setTimeout(closeEditorWindow, 60_000);
-}
-
-for (const eventName of ["pointerdown", "keydown", "input", "wheel", "touchstart"]) {
-  document.addEventListener(eventName, resetIdleClock, { passive: true });
-}
-document.addEventListener("pointermove", () => {
-  if (Date.now() - lastPointerActivityAt < 10_000) return;
-  lastPointerActivityAt = Date.now();
-  resetIdleClock();
-}, { passive: true });
 
 async function request(type, extra = {}) {
   const response = await chrome.runtime.sendMessage({ type, ...extra });
@@ -215,7 +178,6 @@ canvas.addEventListener("pointerdown", event => {
 });
 canvas.addEventListener("pointermove", event => {
   if (!currentStroke || event.pointerId !== activePointerId) return;
-  resetIdleClock();
   event.preventDefault();
   const next = point(event);
   if (tool === "arrow") currentStroke.points[1] = next;
@@ -308,7 +270,6 @@ function resetCaptureForm() {
   png = "";
   if (repositories.length) renderRepositoryOptions();
   updateSubmitEnabled();
-  resetIdleClock();
 }
 
 function saveFormDraft() {
@@ -422,7 +383,6 @@ $("signInButton").addEventListener("click", async () => {
   if (authOpen) return;
   clearAuthError();
   authOpen = true;
-  pauseIdleClock();
   $("signInButton").disabled = true;
   $("signedOut").hidden = true;
   $("authProgress").textContent = "Continue in the GitHub window to connect your account…";
@@ -438,7 +398,6 @@ $("signInButton").addEventListener("click", async () => {
     showAuthError(error.message);
   } finally {
     $("signInButton").disabled = false;
-    resetIdleClock();
   }
 });
 $("signOutButton").addEventListener("click", async () => { await request("AUTH_SIGN_OUT"); await refreshAuth(); });
@@ -450,7 +409,6 @@ $("issueForm").addEventListener("submit", async event => {
   const repo = repositories.find(item => item.full_name === $("repository").value);
   if (!repo) { showError("Choose a repository."); return; }
   submitBusy = true;
-  pauseIdleClock();
   updateSubmitEnabled();
   $("submitButton").textContent = "Creating…";
   try {
@@ -475,7 +433,6 @@ $("issueForm").addEventListener("submit", async event => {
     submitBusy = false;
     $("submitButton").textContent = "Create issue";
     updateSubmitEnabled();
-    resetIdleClock();
   }
 });
 
@@ -492,5 +449,4 @@ chrome.storage.onChanged.addListener((changes, area) => {
     if (!draft && error) { $("emptyMessage").textContent = error; setStep("emptyState"); }
   }
 });
-resetIdleClock();
 loadDraft().catch(error => { $("emptyMessage").textContent = error.message; setStep("emptyState"); });

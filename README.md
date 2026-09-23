@@ -11,11 +11,11 @@ Frame to Issue is a Chrome Manifest V3 extension for turning a selected part of 
 
 The screenshot is uploaded to GitHub before the issue is created. If the upload or issue creation fails, the editor keeps the current capture and form so you can retry. Private repository screenshots are viewable by people with access to that repository.
 
-## Drafts, autosave, and inactivity
+## Drafts and autosave
 
 The current capture and its annotations are saved in extension storage. The issue title, description, repository search, and selected repository are autosaved locally as you edit and restored for the same capture. Starting a new capture clears the prior capture's issue form and annotations. A failed submission keeps the current form open.
 
-The editor warns after 45 seconds without activity and closes after 60 seconds. Signing in and submitting an issue pause the inactivity timer.
+The editor stays open until you close it, including after the issue is created.
 
 ## GitHub access
 

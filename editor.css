@@ -44,13 +44,11 @@ html,body{min-width:320px;overflow-x:clip}
 @media(max-width:414px){.report-head{padding:20px 16px 12px}.report-scroll{padding:0 16px 20px}.report-footer{padding:12px 16px}.capture-stage{height:210px;min-height:170px;padding:10px}.capture-caption{padding:0 11px}.capture-details{padding:13px}.report-grid{gap:14px}.auth-panel.connected #signedIn .text-button{white-space:nowrap}}
 @media(prefers-reduced-motion:reduce){.capture-figure,.capture-stage img{transition:none}}
 /* OAuth, session feedback, and form refinements for the compact editor. */
-:root{--color-github:#24292f;--color-github-hover:#39424c;--color-idle:#70501c;--color-idle-soft:#fff2d8;--color-auth-line:#c6d0d5;--color-auth-wash:#e9eef0;--color-form-disabled:#edf1f3;--color-input-line:#72818a;--color-button-inset:rgb(34 38 41 / .16);--color-connected-wash:#e7f2eb;--color-error:#9b2825;--font-ui:"Segoe UI",ui-sans-serif,system-ui,sans-serif}
+:root{--color-github:#24292f;--color-github-hover:#39424c;--color-auth-line:#c6d0d5;--color-auth-wash:#e9eef0;--color-form-disabled:#edf1f3;--color-input-line:#72818a;--color-button-inset:rgb(34 38 41 / .16);--color-connected-wash:#e7f2eb;--color-error:#9b2825;--font-ui:"Segoe UI",ui-sans-serif,system-ui,sans-serif}
 html,body{overflow-x:clip}
 body{font-family:var(--font-ui)}
 [hidden]{display:none!important}
 .topbar-meta{display:flex;align-items:center;gap:20px;min-width:0}
-.session-note{color:var(--muted);font-size:11px;white-space:nowrap}
-.idle-notice{position:absolute;z-index:5;top:72px;right:20px;max-width:min(310px,calc(100vw - 32px));padding:12px 16px;border:1px solid var(--color-idle);border-radius:9px;background:var(--color-idle-soft);color:var(--color-idle);box-shadow:0 8px 22px var(--color-preview-shadow);font-size:12px;line-height:1.4}
 .auth-panel{margin:0 0 20px;padding:16px;border:1px solid var(--color-auth-line);border-radius:12px;background:var(--surface)}
 .auth-heading{display:flex;align-items:flex-start;gap:12px}
 .auth-icon{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:8px;background:var(--color-github);color:var(--surface)}
@@ -77,5 +75,4 @@ body{font-family:var(--font-ui)}
 .button.secondary:active:not(:disabled){background:var(--color-auth-wash)}
 .text-button:active:not(:disabled),.back-button:active:not(:disabled),.tool:active:not(:disabled){background:var(--color-auth-wash)}
 .intro-row h1,.report-head h1,.empty-state h1,.success-step h1{overflow-wrap:anywhere;min-width:0;text-wrap:balance}
-@media(max-width:800px){.session-note{display:none}}
-@media(max-width:414px){.topbar{gap:8px;padding:0 16px}.brand{gap:8px;font-size:14px}.step-label{font-size:11px}.toolbar{flex-wrap:wrap}.tool-group.trailing{width:100%;margin-left:0;justify-content:flex-end}.connected-label{display:none}.idle-notice{right:16px}}
+@media(max-width:414px){.topbar{gap:8px;padding:0 16px}.brand{gap:8px;font-size:14px}.step-label{font-size:11px}.toolbar{flex-wrap:wrap}.tool-group.trailing{width:100%;margin-left:0;justify-content:flex-end}.connected-label{display:none}}
