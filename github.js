@@ -112,6 +112,8 @@ export function issueBody({ description, pageUrl, windowWidth, windowHeight, vie
     `- Captured: ${capturedAt}`,
     "",
     `![Annotated screenshot](${imageUrl})`,
+    "",
+    `[Open full-size screenshot](${imageUrl})`,
   ].join("\n");
 }
 

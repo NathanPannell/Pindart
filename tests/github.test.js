@@ -36,6 +36,8 @@ test("screenshot upload uses GitHub's attachment request and rejects a missing U
   assert.equal(uploaded, true);
   globalThis.fetch = async () => Response.json({});
   await assert.rejects(uploadImage("test-token", 42, "data:image/png;base64,iVBORw=="), /valid screenshot attachment URL/);
+  globalThis.fetch = async () => Response.json({ url: "https://private-user-images.githubusercontent.com/image.png?jwt=temporary" });
+  await assert.rejects(uploadImage("test-token", 42, "data:image/png;base64,iVBORw=="), /valid screenshot attachment URL/);
 });
 
 test("issue body carries context and image, and create issue submits it", async () => {
@@ -52,6 +54,7 @@ test("issue body carries context and image, and create issue submits it", async 
   assert.match(body, /1260 × 760 px/);
   assert.match(body, /2026-09-22T10:00:00.000Z/);
   assert.match(body, /!\[Annotated screenshot\]/);
+  assert.match(body, /\[Open full-size screenshot\]\(https:\/\/github\.com\/user-attachments\/assets\/abc-123\)/);
   globalThis.fetch = async (url, options) => {
     assert.equal(url, "https://api.github.com/repos/team/private/issues");
     assert.equal(options.method, "POST");

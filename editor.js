@@ -213,7 +213,7 @@ function updateSubmitEnabled() {
   $("submitButton").disabled = submitBusy || !repositories.length || !$("repository").value || !$("issueTitle").value.trim();
   const selected = repositories.find(item => item.full_name === $("repository").value);
   $("uploadNote").textContent = selected?.private
-    ? "Anyone with the attachment link may view this image."
+    ? "Private screenshots are viewable by people with repository access."
     : "Screenshot uploads to GitHub before the issue is created.";
 }
 function recordRepositoryInteraction(repo, kind) {

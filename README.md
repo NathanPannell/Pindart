@@ -24,6 +24,8 @@ Repository search matches owner and repository names. Repositories you have sele
 
 The image is uploaded to GitHub before the issue is created. If upload fails, the form remains open and **no issue is created**. Uploaded media use GitHub attachment URLs, so review the capture for sensitive content before submitting, including when the destination repository is private. See [GitHub's media URL guidance](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-anonymized-urls).
 
+For private repositories, GitHub may render the attachment through a temporary signed image URL. The issue body keeps the permanent `github.com/user-attachments/assets/...` link and includes **Open full-size screenshot** below the preview. If an inline image appears broken, reload the issue or use that link. Do not copy the temporary `private-user-images.githubusercontent.com` URL into another issue.
+
 ## Implementation notes
 
 - The toolbar action injects an isolated region selector into the active tab. The selection overlay is removed before `chrome.tabs.captureVisibleTab` runs.
