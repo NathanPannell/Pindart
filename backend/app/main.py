@@ -1,15 +1,19 @@
 import json
 from contextlib import asynccontextmanager
+from pathlib import Path
 from urllib.parse import urlencode, urlparse
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from .config import Settings
 from .github import GithubOAuth, GithubOAuthError
 from .security import CHALLENGE_PATTERN, TICKET_PATTERN, VERIFIER_PATTERN, challenge, decrypt_token, digest, encrypt_token, random_urlsafe
 from .store import OAuthStore
+
+
+PRIVACY_POLICY = (Path(__file__).with_name("privacy.html")).read_text(encoding="utf-8")
 
 
 class StartRequest(BaseModel):
@@ -86,6 +90,14 @@ def create_app(settings: Settings | None = None, store: OAuthStore | None = None
     @app.get("/health")
     def health():
         return {"status": "ok"}
+
+    @app.get("/privacy", response_class=HTMLResponse)
+    def privacy():
+        return HTMLResponse(PRIVACY_POLICY, headers={
+            "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+            "Referrer-Policy": "no-referrer",
+            "X-Content-Type-Options": "nosniff",
+        })
 
     @app.get("/ready")
     def ready(request: Request):

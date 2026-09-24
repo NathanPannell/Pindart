@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy Policy | Frame to Issue</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1f2328;
+      --muted: #636c76;
+      --line: #d8dee4;
+      --paper: #ffffff;
+      --wash: #f6f8fa;
+      --accent: #b42318;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--wash);
+      font: 16px/1.65 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main {
+      width: min(760px, calc(100% - 32px));
+      margin: 48px auto;
+      padding: clamp(28px, 6vw, 64px);
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 12px 32px rgba(31, 35, 40, 0.06);
+    }
+    header { padding-bottom: 28px; border-bottom: 1px solid var(--line); }
+    .product { margin: 0 0 16px; color: var(--accent); font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(36px, 8vw, 56px); line-height: 1.05; letter-spacing: -.04em; }
+    .updated { margin: 16px 0 0; color: var(--muted); }
+    section { margin-top: 36px; }
+    h2 { margin: 0 0 10px; font-size: 22px; line-height: 1.25; letter-spacing: -.015em; }
+    p { margin: 0 0 14px; }
+    ul { margin: 8px 0 14px; padding-left: 22px; }
+    li + li { margin-top: 8px; }
+    a { color: #0969da; text-underline-offset: 3px; }
+    code { padding: 2px 5px; background: var(--wash); border-radius: 5px; font-size: .9em; }
+    .summary { font-size: 18px; color: #343a40; }
+    footer { margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+    @media (max-width: 520px) {
+      main { width: 100%; margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="product">Frame to Issue</p>
+      <h1>Privacy Policy</h1>
+      <p class="updated">Effective September 23, 2026</p>
+    </header>
+
+    <section aria-labelledby="overview">
+      <h2 id="overview">Overview</h2>
+      <p class="summary">Frame to Issue helps you capture part of a webpage, annotate it, and create an issue in a GitHub repository you choose.</p>
+      <p>The extension processes captures on your device and sends issue content directly to GitHub only when you submit it. The Frame to Issue sign-in service handles the OAuth exchange needed to connect your GitHub account. It does not receive your screenshots or issue content.</p>
+    </section>
+
+    <section aria-labelledby="collection">
+      <h2 id="collection">Information the extension processes</h2>
+      <p>When you use Frame to Issue, the extension may process:</p>
+      <ul>
+        <li>The region of the visible webpage you select, including any information visible in that region.</li>
+        <li>Your annotations, issue title, optional description, selected repository, page URL, capture date and time, browser window dimensions, and page viewport dimensions.</li>
+        <li>Your GitHub username, repositories available to your account, recent repository choices, and GitHub OAuth access and refresh tokens.</li>
+      </ul>
+      <p>Capture drafts, form drafts, repository preferences, and GitHub session credentials are stored in Chrome extension storage on your device. Chrome prevents ordinary webpages from reading this storage. A new capture replaces the previous capture and its form draft. A successfully submitted issue clears its capture draft and temporary upload information. Signing out clears your stored GitHub session credentials.</p>
+    </section>
+
+    <section aria-labelledby="use">
+      <h2 id="use">How information is used and shared</h2>
+      <p>The extension uses your information only to provide the capture-to-issue workflow:</p>
+      <ul>
+        <li>GitHub receives your screenshot, issue title, description, capture context, and selected repository when you submit an issue. GitHub also provides your username and eligible repository list after you sign in.</li>
+        <li>The Frame to Issue sign-in service exchanges GitHub authorization codes and refresh tokens so the extension can maintain your signed-in session.</li>
+        <li>Railway hosts the sign-in service, and Neon hosts its temporary OAuth database.</li>
+      </ul>
+      <p>Frame to Issue does not sell your personal information, use it for advertising, or use analytics or tracking technologies. It does not use your data to determine creditworthiness or for lending purposes.</p>
+    </section>
+
+    <section aria-labelledby="oauth">
+      <h2 id="oauth">OAuth security and retention</h2>
+      <p>The sign-in service requests GitHub's <code>repo</code> permission so you can list repositories and create issues with screenshot attachments in public or private repositories you can access.</p>
+      <p>During sign-in, the service stores a one-time authorization attempt containing security verification values for up to 10 minutes. After GitHub authorizes access, it stores the returned token set in an encrypted, one-time ticket for up to 60 seconds while the extension redeems it. These records become unusable when redeemed or expired and are removed during redemption or routine cleanup. A refresh token passes through the sign-in service when a session is renewed, but the service does not intentionally retain it after responding.</p>
+    </section>
+
+    <section aria-labelledby="control">
+      <h2 id="control">Your choices and controls</h2>
+      <ul>
+        <li>You choose the screen region to capture, the annotations and text to include, the repository, and whether to submit.</li>
+        <li>You can sign out inside the extension to remove its locally stored GitHub credentials.</li>
+        <li>You can remove the extension or clear its extension data in Chrome to delete remaining local drafts and preferences.</li>
+        <li>You can revoke Frame to Issue in your GitHub account settings to end its GitHub access.</li>
+        <li>You can manage or delete submitted issues and attachments through GitHub, subject to your repository permissions and GitHub's policies.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="security">
+      <h2 id="security">Security</h2>
+      <p>Frame to Issue uses HTTPS, a proof-bound OAuth flow, short-lived one-time exchange records, and encryption for token tickets stored by the sign-in service. No system can guarantee absolute security, but we limit processing to what is needed for the product to work.</p>
+    </section>
+
+    <section aria-labelledby="children">
+      <h2 id="children">Children</h2>
+      <p>Frame to Issue is a productivity tool for GitHub users and is not directed to children under 13. We do not knowingly collect personal information from children.</p>
+    </section>
+
+    <section aria-labelledby="changes">
+      <h2 id="changes">Changes to this policy</h2>
+      <p>We may update this policy as the product changes. The effective date at the top will identify the latest version. Material changes will be reflected here before they take effect.</p>
+    </section>
+
+    <section aria-labelledby="contact">
+      <h2 id="contact">Contact</h2>
+      <p>For privacy questions or requests, email <a href="mailto:contact@nathanpannell.com">contact@nathanpannell.com</a>.</p>
+    </section>
+
+    <footer>Frame to Issue privacy policy</footer>
+  </main>
+</body>
+</html>

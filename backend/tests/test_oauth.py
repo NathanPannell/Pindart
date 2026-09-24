@@ -201,3 +201,18 @@ def test_health_and_readiness():
     with client:
         assert client.get("/health").json() == {"status": "ok"}
         assert client.get("/ready").json() == {"status": "ready", "git_sha": "test-revision"}
+
+
+def test_privacy_policy_is_public_and_hardened():
+    client, _ = app_client()
+    with client:
+        response = client.get("/privacy")
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/html")
+        assert response.headers["content-security-policy"].startswith("default-src 'none'")
+        assert response.headers["referrer-policy"] == "no-referrer"
+        assert response.headers["x-content-type-options"] == "nosniff"
+        assert "contact@nathanpannell.com" in response.text
+        assert "does not receive your screenshots or issue content" in response.text
+        assert "up to 10 minutes" in response.text
+        assert "up to 60 seconds" in response.text
