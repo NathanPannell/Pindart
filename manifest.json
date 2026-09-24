@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Frame to Issue",
+  "name": "Pindart: Visual feedback to GitHub",
   "version": "0.1.0",
-  "description": "Capture a page region, mark it up, and create a GitHub issue.",
+  "description": "Point to what should change. Capture a page region, mark it up, and create a GitHub issue.",
   "action": {
-    "default_title": "Capture region for GitHub issue",
+    "default_title": "Pindart: Capture a region",
     "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png" }
   },
   "icons": {
@@ -20,9 +20,8 @@
     }
   },
   "background": { "service_worker": "background.js", "type": "module" },
-  "permissions": ["activeTab", "scripting", "tabs", "storage", "windows", "identity", "unlimitedStorage"],
+  "permissions": ["activeTab", "scripting", "storage", "identity", "unlimitedStorage"],
   "host_permissions": [
-    "https://github.com/*",
     "https://api.github.com/*",
     "https://uploads.github.com/*",
     "https://api-production-2e11d.up.railway.app/*"

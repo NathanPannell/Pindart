@@ -66,7 +66,7 @@ Select the following data types in the Privacy practices tab:
 
 ### Website content
 
-**Declare: Yes.** The selected region of the visible webpage is captured as an image, stored locally as the current draft, and uploaded to GitHub when the user submits the issue.
+**Declare: Yes.** Chrome briefly returns the visible-tab bitmap to the extension in memory after selection. The extension crops it before storage. Only the selected region is stored locally as the current draft and uploaded to GitHub when the user submits the issue.
 
 ### Financial and payment information
 

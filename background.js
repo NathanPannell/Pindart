@@ -108,6 +108,27 @@ async function openEditor() {
   await chrome.storage.session.set({ editorWindowId: windowInfo.id });
 }
 
+async function cropCapturedImage(dataUrl, rect, viewport) {
+  const bitmap = await createImageBitmap(await (await fetch(dataUrl)).blob());
+  try {
+    const sx = bitmap.width / viewport.width;
+    const sy = bitmap.height / viewport.height;
+    const left = Math.max(0, Math.min(bitmap.width - 1, Math.round(rect.x * sx)));
+    const top = Math.max(0, Math.min(bitmap.height - 1, Math.round(rect.y * sy)));
+    const width = Math.max(1, Math.min(bitmap.width - left, Math.round(rect.width * sx)));
+    const height = Math.max(1, Math.min(bitmap.height - top, Math.round(rect.height * sy)));
+    const canvas = new OffscreenCanvas(width, height);
+    canvas.getContext("2d").drawImage(bitmap, left, top, width, height, 0, 0, width, height);
+    const blob = await canvas.convertToBlob({ type: "image/png" });
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = "";
+    for (let index = 0; index < bytes.length; index += 32768) {
+      binary += String.fromCharCode(...bytes.subarray(index, index + 32768));
+    }
+    return `data:image/png;base64,${btoa(binary)}`;
+  } finally { bitmap.close(); }
+}
+
 chrome.windows.onRemoved.addListener(async windowId => {
   const { editorWindowId } = await chrome.storage.session.get("editorWindowId");
   if (windowId === editorWindowId) await chrome.storage.session.remove("editorWindowId");
@@ -127,9 +148,10 @@ async function captureRegion(message, sender) {
   }
   // Allow the injected overlay to be removed and the tab to repaint.
   await new Promise(resolve => setTimeout(resolve, 100));
-  const image = await chrome.tabs.captureVisibleTab(pendingCapture.windowId, { format: "png" });
+  const fullTabImage = await chrome.tabs.captureVisibleTab(pendingCapture.windowId, { format: "png" });
+  const image = await cropCapturedImage(fullTabImage, rect, viewport);
   const draft = {
-    id: crypto.randomUUID(), image, rect, viewport,
+    id: crypto.randomUUID(), image, cropApplied: true, rect, viewport,
     url: pendingCapture.url,
     windowWidth: pendingCapture.windowWidth,
     windowHeight: pendingCapture.windowHeight,
@@ -231,7 +253,7 @@ async function submitIssue(message) {
       imageUrl = await uploadImage(githubToken, repository.id, message.png);
       await chrome.storage.local.set({ uploadedAttachment: { draftId: draft.id, repositoryId: repository.id, imageHash, url: imageUrl } });
     }
-    const marker = `<!-- frame-to-issue:${draft.id} -->`;
+    const marker = `<!-- pindart:${draft.id} -->`;
     const body = issueBody({
       description,
       pageUrl: draft.url,

@@ -8,7 +8,7 @@ Items marked **Owner action** require the publisher's account, payment, legal ac
 - [ ] Run the backend test suite.
 - [ ] Load the release candidate unpacked in Chrome and test capture, markup, GitHub sign-in, repository search, issue creation, retry behavior, and sign-out.
 - [ ] Create one issue in a public repository and one in a private repository. Confirm each screenshot opens for an authorized user after a refresh.
-- [ ] Confirm the production sign-in service is healthy and its privacy policy URL is public over HTTPS without a sign-in wall.
+- [ ] Confirm the production sign-in service is healthy and `https://api-production-2e11d.up.railway.app/privacy` is public over HTTPS without a sign-in wall.
 - [ ] Review the permissions in `manifest.json` against [Chrome's minimum permission policy](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq#minimum-permission). Remove any permission that is no longer used before packaging.
 - [ ] Confirm the manifest name, description, icons, and version are final. Each uploaded update must use a version greater than the previous upload.
 
@@ -32,7 +32,7 @@ Chrome's packaging guidance: [Prepare your extension](https://developer.chrome.c
 ## 4. Create the draft item and bind production OAuth
 
 - [ ] **Owner action:** In the Developer Dashboard, choose Add new item and upload the release ZIP. Do not submit it for review yet.
-- [ ] Copy the final Chrome Web Store extension ID shown for the draft item.
+- [ ] Copy the final Chrome Web Store extension ID and the Package tab's **View public key** value. Chrome's [manifest key guide](https://developer.chrome.com/docs/extensions/reference/manifest/key) explains how to use the public key to match the Store ID in an unpacked test build.
 - [ ] Set Railway `EXTENSION_REDIRECT_URI` to `https://<published-extension-id>.chromiumapp.org/github` exactly.
 - [ ] Keep the GitHub OAuth App callback URL set to `https://api-production-2e11d.up.railway.app/auth/github/callback`.
 - [ ] Deploy the backend configuration and confirm `/ready` returns success.
@@ -59,7 +59,7 @@ Chrome's current asset and listing guidance: [Complete your listing information]
 - [ ] Declare the listed data types: personally identifiable information, authentication information, personal communications, web history, user activity, and website content.
 - [ ] Do not declare financial information, health information, or location for the current product behavior.
 - [ ] Complete the Limited Use certifications exactly as described in `store/privacy-practices.md`.
-- [ ] Enter the final public HTTPS privacy policy URL.
+- [ ] Enter `https://api-production-2e11d.up.railway.app/privacy` as the public privacy policy URL.
 - [ ] Check that the public policy, dashboard declarations, listing copy, and actual behavior agree before submission.
 
 ## 7. Distribution and reviewer access

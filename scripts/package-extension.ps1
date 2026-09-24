@@ -26,7 +26,8 @@ $runtimeFiles = @(
     "background.js",
     "select.js",
     "editor.html",
-    "editor.css",
+    "editor-v2.css",
+    "tokens.css",
     "editor.js",
     "github.js",
     "repositories.js",
@@ -62,7 +63,7 @@ finally {
 
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 $outputRoot = (Resolve-Path -LiteralPath $OutputDirectory).Path
-$packageName = "frame-to-issue-v$($manifest.version).zip"
+$packageName = "pindart-v$($manifest.version).zip"
 $packagePath = Join-Path $outputRoot $packageName
 $checksumPath = "$packagePath.sha256"
 $stagingPath = Join-Path $workspaceRoot (".package-staging-" + [guid]::NewGuid().ToString("N"))

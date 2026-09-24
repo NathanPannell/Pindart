@@ -1,0 +1,53 @@
+:root {
+  --font-body: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-key: ui-monospace, Consolas, monospace;
+
+  --color-canvas: #f5f6f7;
+  --color-surface: #fff;
+  --color-ink: #202329;
+  --color-muted: #69717d;
+  --color-subtle: #5d6773;
+  --color-line: #dfe3e8;
+  --color-line-strong: #cbd2da;
+  --color-accent: #d83c38;
+  --color-accent-hover: #bb2d2a;
+  --color-accent-wash: #fff1ef;
+  --color-success: #247f5c;
+
+  --color-github: #24272c;
+  --color-github-hover: #111317;
+  --color-label: #343a43;
+  --color-step: #454d57;
+  --color-detail: #48515d;
+  --color-caption: #4a535f;
+  --color-tool: #4b5360;
+  --color-control: #525c68;
+  --color-key: #535b66;
+  --color-search-icon: #7a838e;
+  --color-error: #9e302b;
+  --color-active-tool: #a72e2a;
+  --color-scrollbar: #c9ced4;
+  --color-focus-border: #d65853;
+  --color-grid: #d7dce2;
+  --color-canvas-border: #dce2e8;
+  --color-success-wash: #e0f2e9;
+  --color-empty-border: #e39e99;
+  --color-preview: #e8edf2;
+  --color-editor: #e9edf1;
+  --color-control-hover: #eef0f2;
+  --color-focus-ring: #ef8580;
+  --color-tool-hover: #f2f3f5;
+  --color-error-border: #f3c8c4;
+  --color-active-border: #fac6c2;
+  --color-focus-wash: #fbe4e2;
+  --color-selection: #ffd4d0;
+  --color-error-wash: #fff0ee;
+
+  --color-action-shadow: rgb(146 38 34 / 15%);
+  --color-toolbar-shadow: rgb(26 33 42 / 3%);
+  --color-image-shadow: rgb(26 35 46 / 18%);
+  --color-canvas-shadow: rgb(27 35 45 / 20%);
+  --color-panel-shadow: rgb(27 35 45 / 8%);
+
+  --shadow-panel: 0 12px 36px var(--color-panel-shadow);
+}

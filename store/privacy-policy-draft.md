@@ -1,16 +1,16 @@
-# Frame to Issue Privacy Policy
+# Pindart Privacy Policy
 
-**Effective date:** [ENTER PUBLICATION DATE]
+**Effective date:** September 23, 2026. The public HTML policy at `https://api-production-2e11d.up.railway.app/privacy` is authoritative; keep this source copy aligned with it.
 
-Frame to Issue helps you capture and annotate part of a webpage and create a GitHub issue with that image and page context. This policy explains the data the Chrome extension and its sign-in service handle.
+Pindart helps you capture and annotate part of a webpage and create a GitHub issue with that image and page context. This policy explains the data the Chrome extension and its sign-in service handle.
 
-## Data handled by Frame to Issue
+## Data handled by Pindart
 
-When you start a capture, the extension handles the selected screenshot, annotation strokes, the current page URL, browser window and page viewport dimensions, and capture time. In the issue form, it also handles the repository you choose, repository search text, issue title, and optional description.
+When you finish a selection, Chrome briefly returns the visible-tab bitmap to the extension in memory. The extension crops it before storage and retains only the selected screenshot. It also handles annotation strokes, the current page URL, browser window and page viewport dimensions, and capture time. In the issue form, it handles the repository you choose, repository search text, issue title, and optional description.
 
 When you sign in, the extension receives your GitHub username, repository metadata, and GitHub OAuth access and refresh tokens. The extension does not collect your GitHub password.
 
-Frame to Issue does not run a background browsing-history collector. It handles a page URL and page image only when you explicitly start a capture.
+Pindart does not run a background browsing-history collector. It handles a page URL and page image only when you explicitly start a capture.
 
 ## How the data is used
 
@@ -20,13 +20,13 @@ The extension stores the current capture, annotations, form draft, repository or
 
 ## Sign-in service
 
-Frame to Issue uses a product-owned service hosted on Railway to complete GitHub OAuth sign-in and token refresh. During sign-in, the service stores an authorization attempt for up to 10 minutes and a one-time encrypted token ticket for up to 60 seconds. A redeemed authorization attempt or ticket is deleted immediately. Expired records become unusable and are deleted during later authentication housekeeping.
+Pindart uses a product-owned service hosted on Railway to complete GitHub OAuth sign-in and token refresh. During sign-in, the service stores an authorization attempt for up to 10 minutes and a one-time encrypted token ticket for up to 60 seconds. A redeemed authorization attempt or ticket is deleted immediately. Expired records become unusable and are deleted during later authentication housekeeping.
 
 During token refresh, the service processes the refresh token in memory and forwards it to GitHub. It does not persist the refresh token as an account record. Neon provides the database used for the short-lived authorization records. Railway and Neon may process operational data such as IP addresses, request timing, and service logs under their own policies and retention settings.
 
 ## Sharing
 
-Frame to Issue transfers data only as needed to provide its stated purpose:
+Pindart transfers data only as needed to provide its stated purpose:
 
 * GitHub receives OAuth requests, repository requests, the annotated screenshot, and the issue content you submit.
 * Railway hosts the OAuth service.
@@ -42,17 +42,17 @@ The current draft and form remain in local extension storage so you can retry a 
 
 The issue and uploaded screenshot remain in GitHub according to the selected repository's settings and GitHub's retention rules. Delete or edit the GitHub issue through GitHub if you want to remove that submitted content.
 
-The sign-in service records described above are short-lived and cannot be used after they expire. The service does not maintain a separate Frame to Issue user account.
+The sign-in service records described above are short-lived and cannot be used after they expire. The service does not maintain a separate Pindart user account.
 
 ## Security
 
-Frame to Issue transmits data over HTTPS. GitHub tokens are stored in extension-local storage restricted to trusted extension contexts. One-time OAuth token tickets are encrypted at rest and bound to the requesting extension flow.
+Pindart transmits data over HTTPS. GitHub tokens are stored in extension-local storage restricted to trusted extension contexts. One-time OAuth token tickets are encrypted at rest and bound to the requesting extension flow.
 
 No method of storage or transmission is completely secure. Report a suspected security or privacy issue to the contact below.
 
 ## Chrome Web Store Limited Use disclosure
 
-Frame to Issue's use of information received through Chrome APIs complies with the Chrome Web Store User Data Policy, including the Limited Use requirements. The data is used only to provide or improve the extension's single purpose, transferred only when necessary to provide that purpose or as otherwise permitted by the policy, never used for personalized advertising, and not made available for humans to read except in the limited circumstances permitted by the policy.
+Pindart's use of information received through Chrome APIs complies with the Chrome Web Store User Data Policy, including the Limited Use requirements. The data is used only to provide or improve the extension's single purpose, transferred only when necessary to provide that purpose or as otherwise permitted by the policy, never used for personalized advertising, and not made available for humans to read except in the limited circumstances permitted by the policy.
 
 ## Changes
 

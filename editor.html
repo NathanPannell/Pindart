@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Frame to Issue</title>
-  <link rel="stylesheet" href="editor.css">
+  <title>Pindart</title>
+  <link rel="stylesheet" href="editor-v2.css">
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span>Frame to Issue</span></div>
-    <div class="topbar-meta"><span id="stepLabel" class="step-label">Mark up capture</span></div>
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span>Pindart</span></div>
+    <div class="topbar-meta"><span class="workflow-kicker">CAPTURE / REPORT</span><span id="stepLabel" class="step-label">Mark up capture</span></div>
   </header>
 
   <main>
@@ -23,8 +23,9 @@
     <section id="markupStep" class="markup-step" hidden>
       <div class="intro-row">
         <div>
-          <h1>Show what needs attention.</h1>
-          <p>Mark the exact spot. Your annotated capture will go into the issue.</p>
+          <span class="eyebrow">01 / MARKUP</span>
+          <h1>Show what needs attention</h1>
+          <p>Point to the problem on your capture. These marks will appear in the issue.</p>
         </div>
         <span id="captureSize" class="capture-size"></span>
       </div>
@@ -50,27 +51,22 @@
         <canvas id="markupCanvas" aria-label="Captured webpage region. Use the selected tool to mark it up."></canvas>
       </div>
       <footer class="bottom-bar">
-        <span>Shortcuts: A arrow · P draw · Ctrl+Z undo</span>
-        <button id="continueButton" class="button primary" type="button">Continue to issue <span aria-hidden="true">→</span></button>
+        <span>Shortcuts <kbd>A</kbd> arrow <kbd>P</kbd> draw <kbd>Ctrl+Z</kbd> undo</span>
+        <button id="continueButton" class="button primary" type="button">Continue <span aria-hidden="true">→</span></button>
       </footer>
     </section>
 
     <section id="reportStep" class="report-step" hidden>
-      <div class="report-head">
-        <button id="backButton" class="back-button" type="button"><span aria-hidden="true">←</span> Back to markup</button>
-        <h1>Create the issue.</h1>
-        <p>Choose the destination, describe the problem, and review your capture before posting.</p>
-      </div>
-
       <div class="report-scroll">
         <div class="report-grid">
         <div class="capture-column">
+          <div class="media-header"><span class="eyebrow">02 / REVIEW</span><strong>Your capture</strong><span id="selectionSize"></span></div>
           <figure class="capture-figure">
-            <div class="capture-caption"><span>Marked-up capture</span><span id="selectionSize"></span></div>
-            <div class="capture-stage"><img id="previewImage" alt="Annotated screenshot that will be attached to the issue"></div>
+            <div class="capture-caption"><span class="caption-dot"></span><span>Marked-up screenshot</span><span>Ready to attach</span></div>
+            <div class="capture-stage"><img id="previewImage" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Annotated screenshot that will be attached to the issue"></div>
           </figure>
           <div class="capture-details">
-            <strong>Capture details</strong>
+            <strong>Capture context</strong>
             <dl>
               <div><dt>Page</dt><dd id="pageUrl"></dd></div>
               <div><dt>Window</dt><dd id="windowSize"></dd></div>
@@ -81,6 +77,11 @@
         </div>
 
         <div class="compose-column">
+        <div class="report-head">
+          <button id="backButton" class="back-button" type="button"><span aria-hidden="true">←</span> Back to markup</button>
+          <h1>New issue</h1>
+          <p>Send this capture to the repository where your team works.</p>
+        </div>
 
         <div id="authPanel" class="auth-panel">
           <div id="signedOut" hidden>
@@ -88,7 +89,7 @@
             <button id="signInButton" type="button" class="button github-button">Sign in with GitHub <span aria-hidden="true">↗</span></button>
           </div>
           <div id="signedIn" hidden>
-            <span class="connected-dot" aria-hidden="true"></span><span class="connected-label">GitHub connected</span><strong id="connectedAs"></strong>
+            <span class="connected-dot" aria-hidden="true"></span><span class="connected-label">GitHub</span><strong id="connectedAs"></strong>
             <button id="signOutButton" type="button" class="text-button">Sign out</button>
           </div>
           <p id="authProgress" class="auth-progress" role="status" aria-live="polite" hidden></p>
@@ -96,7 +97,7 @@
         </div>
 
         <form id="issueForm">
-          <label for="repositorySearch">Repository</label>
+          <label for="repositorySearch">Send to</label>
           <div class="repository-search">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.5 15.5 5 5"/></svg>
             <input id="repositorySearch" type="search" autocomplete="off" placeholder="Search owner or repository" aria-describedby="repoSearchStatus" disabled>
@@ -105,7 +106,7 @@
           <p id="repoSearchStatus" class="field-note" aria-live="polite">Repositories with issue and screenshot access appear here.</p>
           <p id="repoError" class="error" role="alert" hidden></p>
 
-          <label for="issueTitle">Issue title</label>
+          <label for="issueTitle">Title</label>
           <input id="issueTitle" type="text" maxlength="256" required placeholder="A short summary of the problem" autocomplete="off">
 
           <label for="issueDescription">Description <span class="optional">optional</span></label>
@@ -117,7 +118,7 @@
       </div>
       <div class="report-footer">
         <p id="formError" class="error" role="alert" hidden></p>
-        <div class="submit-row"><span id="uploadNote">Screenshot uploads to GitHub before the issue is created.</span><button id="submitButton" type="submit" form="issueForm" class="button primary" disabled>Create issue</button></div>
+        <div class="submit-row"><span id="uploadNote">Screenshot uploads to GitHub before the issue is created.</span><button id="submitButton" type="submit" form="issueForm" class="button primary" disabled>Create issue <span aria-hidden="true">↗</span></button></div>
       </div>
     </section>
 

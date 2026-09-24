@@ -54,7 +54,7 @@ export async function uploadImage(token, repositoryId, pngDataUrl) {
   const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
   if (bytes.byteLength > 10 * 1024 * 1024) throw new Error("The screenshot exceeds GitHub’s 10 MB image limit. Capture a smaller region.");
   const query = new URLSearchParams({
-    name: `frame-to-issue-${Date.now()}.png`,
+    name: `pindart-${Date.now()}.png`,
     content_type: "image/png",
     repository_id: String(repositoryId),
   });

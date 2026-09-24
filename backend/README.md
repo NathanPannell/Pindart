@@ -1,6 +1,6 @@
 # GitHub sign-in service
 
-This FastAPI service is the confidential part of Frame to Issue's GitHub OAuth flow. The published extension contains only public configuration. The GitHub client secret stays in Railway. GitHub tokens are returned to the extension only after its one-time login proof is verified.
+This FastAPI service is the confidential part of Pindart's GitHub OAuth flow. The published extension contains only public configuration. The GitHub client secret stays in Railway. GitHub tokens are returned to the extension only after its one-time login proof is verified.
 
 ## OAuth app registration
 

@@ -1,15 +1,15 @@
-# Frame to Issue
+# Pindart
 
-Frame to Issue is a Chrome Manifest V3 extension for turning a selected part of a webpage into an annotated GitHub issue. The published experience uses one product-owned GitHub OAuth app and a Railway sign-in service. Users do not create or configure their own OAuth apps.
+Pindart is a Chrome Manifest V3 extension for turning a selected part of a webpage into an annotated GitHub issue. The published experience uses one product-owned GitHub OAuth app and a Railway sign-in service. Users do not create or configure their own OAuth apps.
 
 ## Use the extension
 
 1. Open the page you want to report and click the extension in the toolbar, or press **Ctrl+Shift+Y**.
 2. Drag over the visible page region to capture. Press **Esc** to cancel. The capture does not include browser controls or other desktop windows.
-3. Add red arrows or freehand marks in the editor, then choose **Continue to issue**.
+3. Add red arrows or freehand marks in the editor, then choose **Continue**.
 4. Review the capture and its page URL, browser window size, viewport size, and capture time. Sign in with GitHub if needed, choose a repository, enter a title and optional description, then create the issue.
 
-The screenshot is uploaded to GitHub before the issue is created. If the upload or issue creation fails, the editor keeps the current capture and form so you can retry. Private repository screenshots are viewable by people with access to that repository.
+The screenshot is uploaded to GitHub before the issue is created. If the upload or issue creation fails, the editor keeps the current capture and form so you can retry. GitHub states that private-repository attachments normally require repository access; a copied temporary media URL can still be shared while valid, so review sensitive content before submitting.
 
 ## Drafts and autosave
 

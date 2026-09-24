@@ -85,10 +85,10 @@ async function loadDraft() {
   await image.decode();
   const sx = image.naturalWidth / draft.viewport.width;
   const sy = image.naturalHeight / draft.viewport.height;
-  const left = Math.max(0, Math.min(image.naturalWidth - 1, Math.round(draft.rect.x * sx)));
-  const top = Math.max(0, Math.min(image.naturalHeight - 1, Math.round(draft.rect.y * sy)));
-  const width = Math.max(1, Math.min(image.naturalWidth - left, Math.round(draft.rect.width * sx)));
-  const height = Math.max(1, Math.min(image.naturalHeight - top, Math.round(draft.rect.height * sy)));
+  const left = draft.cropApplied ? 0 : Math.max(0, Math.min(image.naturalWidth - 1, Math.round(draft.rect.x * sx)));
+  const top = draft.cropApplied ? 0 : Math.max(0, Math.min(image.naturalHeight - 1, Math.round(draft.rect.y * sy)));
+  const width = draft.cropApplied ? image.naturalWidth : Math.max(1, Math.min(image.naturalWidth - left, Math.round(draft.rect.width * sx)));
+  const height = draft.cropApplied ? image.naturalHeight : Math.max(1, Math.min(image.naturalHeight - top, Math.round(draft.rect.height * sy)));
   base.width = canvas.width = width;
   base.height = canvas.height = height;
   baseCtx.drawImage(image, left, top, width, height, 0, 0, width, height);
@@ -233,7 +233,7 @@ function updateSubmitEnabled() {
   $("submitButton").disabled = submitBusy || !repositories.length || !$("repository").value || !$("issueTitle").value.trim();
   const selected = repositories.find(item => item.full_name === $("repository").value);
   $("uploadNote").textContent = selected?.private
-    ? "Private screenshots are viewable by people with repository access."
+    ? "Screenshot uploads to the selected private repository."
     : "Screenshot uploads to GitHub before the issue is created.";
 }
 function recordRepositoryInteraction(repo, kind) {
