@@ -24,7 +24,7 @@
   "host_permissions": [
     "https://api.github.com/*",
     "https://uploads.github.com/*",
-    "https://api-production-2e11d.up.railway.app/*"
+    "https://your-sign-in-service.example.com/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"

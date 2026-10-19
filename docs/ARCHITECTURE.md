@@ -1,8 +1,8 @@
 # Pindart architecture and maintainer notes
 
-This page covers how Pindart works under the hood and how the hosted sign-in service is configured. For an introduction, see the [README](../README.md).
+This page covers how Pindart works under the hood and how its sign-in service fits in. For an introduction and step-by-step setup, see the [README](../README.md).
 
-Pindart is a Chrome Manifest V3 extension for turning a selected part of a webpage into an annotated GitHub issue. The published experience uses one product-owned GitHub OAuth app and a Railway sign-in service. Users do not create or configure their own OAuth apps.
+Pindart is a Chrome Manifest V3 extension for turning a selected part of a webpage into an annotated GitHub issue. There is no hosted version: each person or team that uses Pindart runs their own sign-in service and GitHub OAuth app.
 
 ## Use the extension
 
@@ -23,35 +23,35 @@ The editor stays open until you close it, including after the issue is created.
 
 The extension requests the OAuth scope `repo` to list and create issues on public and private repositories the signed-in user can access. GitHub OAuth Apps do not provide an issue-only scope. The `repo` scope is broad and includes read and write access to public and private repositories and related repository data. Organization policies may require an organization owner to approve the OAuth app. See GitHub's [OAuth scope descriptions](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps) and [organization access restrictions](https://docs.github.com/en/organizations/managing-oauth-access-to-your-organizations-data/about-oauth-app-access-restrictions).
 
-The extension also requests `offline_access`. GitHub access tokens expire after eight hours and refresh tokens after six months without use. The extension refreshes tokens through Railway when needed, and replaces the refresh token each time because GitHub rotates it. If a refresh token expires or is revoked, sign in again. See GitHub's [expiring OAuth access token guidance](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#expiring-access-tokens).
+The extension also requests `offline_access`. GitHub access tokens expire after eight hours and refresh tokens after six months without use. The extension refreshes tokens through the sign-in service when needed, and replaces the refresh token each time because GitHub rotates it. If a refresh token expires or is revoked, sign in again. See GitHub's [expiring OAuth access token guidance](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#expiring-access-tokens).
 
 The extension stores the GitHub access and refresh tokens locally in Chrome extension storage. Sign out clears the extension's local session. To revoke the app's authorization as well, remove it from [GitHub's authorized applications](https://github.com/settings/applications).
 
-## Service configuration for maintainers
+## Sign-in service configuration
 
-The production sign-in API is `https://api-production-2e11d.up.railway.app/`. The GitHub OAuth App's authorization callback URL is:
+The sign-in service in [`backend/`](../backend) holds the GitHub OAuth client secret so the extension never has to. Each deployment needs its own GitHub OAuth App whose authorization callback URL is:
 
-`https://api-production-2e11d.up.railway.app/auth/github/callback`
+`https://<service-url>/auth/github/callback`
 
-The extension uses a second redirect after the Railway callback so Chrome can finish the login window. Chrome derives it from the extension ID:
+The extension uses a second redirect after that callback so Chrome can finish the login window. Chrome derives it from the extension ID:
 
-`https://<published-extension-id>.chromiumapp.org/github`
+`https://<extension-id>.chromiumapp.org/github`
 
-Set Railway's `EXTENSION_REDIRECT_URI` to the exact value returned by `chrome.identity.getRedirectURL("github")` for the published extension. Keep the published extension ID stable. The ID is not present in this repository, so the owner must set this value after the Chrome Web Store listing has its final ID. For local OAuth testing, use the unpacked extension's ID in a separate development service configuration. Do not change the production redirect allowlist to accept arbitrary IDs.
+Set `EXTENSION_REDIRECT_URI` to the exact value returned by `chrome.identity.getRedirectURL("github")` for your copy of the extension. An unpacked extension's ID depends on its folder path, so keep the folder in one place or pin the ID with a manifest `key`. The service accepts exactly one redirect URL; do not loosen it to accept arbitrary IDs.
 
-The service owner configures the product OAuth app and these Railway variables. Never commit the OAuth client secret, database credentials, or encryption key.
+Never commit the OAuth client secret, database credentials, or encryption key.
 
-| Railway variable | Value |
+| Variable | Value |
 | --- | --- |
-| `GITHUB_CLIENT_ID` | Product OAuth app's public client ID. |
-| `GITHUB_CLIENT_SECRET` | Product OAuth app's private client secret. |
-| `PUBLIC_BASE_URL` | `https://api-production-2e11d.up.railway.app` |
-| `EXTENSION_REDIRECT_URI` | Exact published extension URL shown above. |
-| `DATABASE_URL` | Pooled Neon PostgreSQL connection string. |
+| `GITHUB_CLIENT_ID` | Your OAuth app's public client ID. |
+| `GITHUB_CLIENT_SECRET` | Your OAuth app's private client secret. |
+| `PUBLIC_BASE_URL` | `https://<service-url>` |
+| `EXTENSION_REDIRECT_URI` | Exact extension redirect URL shown above. |
+| `DATABASE_URL` | Pooled PostgreSQL connection string. |
 | `TOKEN_ENCRYPTION_KEY` | Random 32-byte key, base64url encoded, for temporary encrypted OAuth tickets. |
-| `DATABASE_URL_UNPOOLED` | Direct Neon connection string for running migrations only. |
+| `DATABASE_URL_UNPOOLED` | Direct PostgreSQL connection string for running migrations only. |
 
-The extension's `AUTH_API_BASE_URL` in [`config.js`](../config.js) and Railway host permission in [`manifest.json`](../manifest.json) must match the production API host. The backend listens on Railway's injected `$PORT`. Apply the database migration before the service is considered ready. See [`backend/README.md`](../backend/README.md) for backend setup, token handling, and migration commands.
+The extension's `AUTH_API_BASE_URL` in [`config.js`](../config.js) and the matching host permission in [`manifest.json`](../manifest.json) must point at your service. The backend listens on the `$PORT` its host provides. Apply the database migration before the service is considered ready. See [`backend/README.md`](../backend/README.md) for backend setup, token handling, and migration commands.
 
 ## Implementation notes
 
@@ -63,4 +63,4 @@ The extension's `AUTH_API_BASE_URL` in [`config.js`](../config.js) and Railway h
 
 ## Development
 
-The extension uses browser-native JavaScript and has no build step or runtime package dependencies. In `chrome://extensions`, enable Developer mode and choose **Load unpacked**, then select the repository root. An unpacked extension usually has a different ID from the published extension. For prepublication testing, set Railway's exact `EXTENSION_REDIRECT_URI` to the unpacked ID's `chrome.identity` redirect, then replace it with the final published ID before release. A separate development Railway environment is preferable when both versions need to work at once. Run extension syntax checks with `node --check` and backend tests from `backend/` with `python -m pytest -q` after installing `requirements-dev.txt`.
+The extension uses browser-native JavaScript and has no build step or runtime package dependencies. In `chrome://extensions`, enable Developer mode and choose **Load unpacked**, then select the repository root. Run extension syntax checks with `npm run check`, extension tests with `npm test`, and backend tests from `backend/` with `python -m pytest -q` after installing `requirements-dev.txt`.

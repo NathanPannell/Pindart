@@ -65,24 +65,30 @@ The button needs to align with the heading.
 
 ## Install
 
-### From the Chrome Web Store
+> [!IMPORTANT]
+> **Pindart is self-hosted only.** It is not on the Chrome Web Store, and there is no public sign-in service you can use. To use it, you run your own copy of the small sign-in service in [`backend/`](backend) and connect it to your own GitHub OAuth App. There are no plans to offer a hosted version.
 
-Coming soon. The store listing is in review preparation. Watch this repository to hear when it's live.
+Setup usually takes under an hour, and free tiers of common hosts are enough. You'll need:
 
-### From source
+- **Google Chrome** to load the extension.
+- **A GitHub account** to create an OAuth App for sign-in.
+- **A host for a small Python web service** with HTTPS, such as [Railway](https://railway.com) or [Render](https://render.com).
+- **A PostgreSQL database**, such as [Neon](https://neon.tech).
 
-1. Download this repository (**Code → Download ZIP**, then unzip it) or clone it with `git clone https://github.com/NathanPannell/Pindart.git`.
-2. In Chrome, go to `chrome://extensions`.
-3. Turn on **Developer mode** (top right).
-4. Click **Load unpacked** and choose the Pindart folder.
-5. Pin Pindart to your toolbar from the puzzle-piece menu.
+The [setup instructions](#setup-instructions-for-agents) at the bottom of this page walk through every step. They're written so an AI coding agent can do the setup for you: point your agent at this README and ask it to set up Pindart.
 
-> [!NOTE]
-> GitHub sign-in goes through a small sign-in service that only accepts known extension IDs. A copy you load from source gets its own ID, so you'll need to run your own sign-in service until the Chrome Web Store version is available. The [setup instructions](#setup-instructions-for-agents) below walk through it step by step. They're written so an AI coding agent can follow them for you.
+In short, you'll:
+
+1. Download or clone this repository.
+2. Load it in Chrome from `chrome://extensions` with **Developer mode** on and **Load unpacked**.
+3. Deploy the sign-in service, create a GitHub OAuth App, and connect the two.
+4. Point the extension at your service in `config.js` and `manifest.json`, then reload it.
+
+Until step 4 is done, the extension can capture and mark up screenshots, but it can't sign in to GitHub or create issues.
 
 ## Privacy and permissions
 
-Pindart only does something when you ask it to. It doesn't read pages in the background, track you, or send data anywhere except GitHub and its own sign-in service.
+Pindart only does something when you ask it to. It doesn't read pages in the background, track you, or send data anywhere except GitHub and the sign-in service you run yourself.
 
 | Permission | Why Pindart needs it |
 | --- | --- |
@@ -95,7 +101,7 @@ Pindart only does something when you ask it to. It doesn't read pages in the bac
 
 **About screenshots:** Images are uploaded to GitHub as issue attachments. In private repositories, GitHub normally requires repository access to view them, so review sensitive content before you submit.
 
-Read the full [privacy policy](https://api-production-2e11d.up.railway.app/privacy) and [security policy](SECURITY.md).
+Because you host the sign-in service yourself, no one else handles your sign-in. Read the [security policy](SECURITY.md) for how tokens are protected.
 
 ## Good to know
 
@@ -109,7 +115,7 @@ Read the full [privacy policy](https://api-production-2e11d.up.railway.app/priva
 | --- | --- | --- |
 | Chrome extension | repository root | Region selection (`select.js`), markup and issue form (`editor.*`), GitHub calls in the background worker (`background.js`, `github.js`) |
 | Sign-in service | [`backend/`](backend) | Small FastAPI app that keeps the GitHub OAuth secret off users' machines and hands the extension its tokens safely |
-| Docs | [`docs/`](docs) | [Architecture notes](docs/ARCHITECTURE.md), [design system](docs/DESIGN.md), and [Chrome Web Store materials](docs/chrome-web-store) |
+| Docs | [`docs/`](docs) | [Architecture notes](docs/ARCHITECTURE.md), [design system](docs/DESIGN.md), and [archived Chrome Web Store materials](docs/chrome-web-store) |
 
 ## Contributing
 
@@ -123,7 +129,7 @@ Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for
 
 ## Setup instructions for agents
 
-These steps are written for an AI coding agent (or a developer) setting up a fully working Pindart from source, including its own GitHub sign-in service. Follow them in order. Every value marked `<like-this>` must be replaced.
+These steps are written for an AI coding agent (or a developer) setting up a fully working Pindart from source. There is no hosted sign-in service, so every installation needs its own, and these steps include deploying it. Follow them in order. Every value marked `<like-this>` must be replaced.
 
 ### What you need from the human
 
@@ -216,10 +222,10 @@ Note the service's public HTTPS origin, for example `https://pindart-auth.exampl
 
 ### 6. Point the extension at your service
 
-Edit two files in the repository root so they use your values instead of the defaults:
+Edit two files in the repository root. They ship with placeholder values that must be replaced:
 
 - `config.js`: set `GITHUB_CLIENT_ID` to your client ID and `AUTH_API_BASE_URL` to `<service-url>/`. The trailing slash is required.
-- `manifest.json`: in `host_permissions`, replace `https://api-production-2e11d.up.railway.app/*` with `<service-url>/*`.
+- `manifest.json`: in `host_permissions`, replace `https://your-sign-in-service.example.com/*` with `<service-url>/*`.
 
 Then click the reload icon on the Pindart card in `chrome://extensions`.
 
@@ -232,10 +238,10 @@ Then click the reload icon on the Pindart card in `chrome://extensions`.
 
 If sign-in fails with "returned to an unexpected address" or the service rejects the redirect, the extension ID no longer matches `EXTENSION_REDIRECT_URI`. Repeat step 2 and update the variable.
 
-### 8. Optional: package for the Chrome Web Store
+### 8. Optional: package as a ZIP
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\package-extension.ps1
 ```
 
-This runs the checks and tests, then writes `dist/pindart-v<version>.zip` and a SHA-256 checksum. A store-published extension gets a new permanent ID, so update `EXTENSION_REDIRECT_URI` to match it. See [`docs/chrome-web-store/release-checklist.md`](docs/chrome-web-store/release-checklist.md) for the full release process and [`backend/README.md`](backend/README.md) for the sign-in protocol.
+This runs the checks and tests, then writes `dist/pindart-v<version>.zip` and a SHA-256 checksum, which is useful for sharing a configured build with a team. Pindart itself is not published to the Chrome Web Store. If you publish your own copy, it gets a new permanent extension ID, so update `EXTENSION_REDIRECT_URI` to match it. The [archived store materials](docs/chrome-web-store) may help. See [`backend/README.md`](backend/README.md) for the sign-in protocol.

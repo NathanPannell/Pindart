@@ -1,12 +1,12 @@
 # GitHub sign-in service
 
-This FastAPI service is the confidential part of Pindart's GitHub OAuth flow. The published extension contains only public configuration. The GitHub client secret stays in Railway. GitHub tokens are returned to the extension only after its one-time login proof is verified.
+This FastAPI service is the confidential part of Pindart's GitHub OAuth flow. The extension contains only public configuration. The GitHub client secret stays on the server. GitHub tokens are returned to the extension only after its one-time login proof is verified.
 
 ## OAuth app registration
 
-Create one GitHub OAuth app for the published extension. Set its authorization callback URL to `https://<railway-api-domain>/auth/github/callback`. The service requests `repo offline_access`: `repo` supports the extension's private-repository and attachment features, while `offline_access` opts a sign-in into [GitHub's expiring-token flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#expiring-access-tokens). Device flow is unnecessary for this service.
+Create one GitHub OAuth app for your deployment. Set its authorization callback URL to `https://<service-url>/auth/github/callback`. The service requests `repo offline_access`: `repo` supports the extension's private-repository and attachment features, while `offline_access` opts a sign-in into [GitHub's expiring-token flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#expiring-access-tokens). Device flow is unnecessary for this service.
 
-The extension's `chrome.identity.getRedirectURL("github")` result must exactly match `EXTENSION_REDIRECT_URI`. That URL has the form `https://<32-character-extension-id>.chromiumapp.org/github`. Chrome assigns the published extension ID; keep it stable across releases.
+The extension's `chrome.identity.getRedirectURL("github")` result must exactly match `EXTENSION_REDIRECT_URI`. That URL has the form `https://<32-character-extension-id>.chromiumapp.org/github`. Keep the extension ID stable: an unpacked extension's ID depends on its folder path unless you pin it with a manifest `key`.
 
 ## Environment
 

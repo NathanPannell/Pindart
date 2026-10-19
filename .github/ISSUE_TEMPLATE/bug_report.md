@@ -16,6 +16,6 @@ labels: bug
 **Environment**
 - Chrome version:
 - Operating system:
-- Installed from: Chrome Web Store / loaded from source
+- Sign-in service host (e.g. Railway, Render, local):
 
 Tip: you can file this report with Pindart itself. Capture the problem, mark it up, and send it here.
