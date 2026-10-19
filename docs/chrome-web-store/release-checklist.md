@@ -15,7 +15,7 @@ Items marked **Owner action** require the publisher's account, payment, legal ac
 ## 2. Build the upload package
 
 - [ ] Run `powershell -ExecutionPolicy Bypass -File .\scripts\package-extension.ps1`.
-- [ ] Find the ZIP and SHA-256 file in `C:\repo\screenshot-to-issue-workspace\release`.
+- [ ] Find the ZIP and SHA-256 file in `dist/`.
 - [ ] Open the ZIP and confirm `manifest.json` is at the archive root.
 - [ ] Confirm the ZIP contains only extension runtime files. The packaging script intentionally excludes source documentation, tests, backend code, store materials, and development metadata.
 - [ ] Keep the ZIP and checksum together for the release record.
@@ -42,7 +42,7 @@ Uploading the draft first is necessary because the final extension ID is require
 
 ## 5. Complete the Store Listing tab
 
-- [ ] Paste the name, summary, detailed description, category, and language from `store/listing.md`.
+- [ ] Paste the name, summary, detailed description, category, and language from `docs/chrome-web-store/listing.md`.
 - [ ] Upload the 128 x 128 store icon from the release package.
 - [ ] Upload at least one 1280 x 800 screenshot. Up to five may be supplied.
 - [ ] Upload the required 440 x 280 small promo tile.
@@ -54,11 +54,11 @@ Chrome's current asset and listing guidance: [Complete your listing information]
 
 ## 6. Complete the Privacy practices tab
 
-- [ ] Paste the single-purpose statement from `store/privacy-practices.md`.
+- [ ] Paste the single-purpose statement from `docs/chrome-web-store/privacy-practices.md`.
 - [ ] Paste each permission justification.
 - [ ] Declare the listed data types: personally identifiable information, authentication information, personal communications, web history, user activity, and website content.
 - [ ] Do not declare financial information, health information, or location for the current product behavior.
-- [ ] Complete the Limited Use certifications exactly as described in `store/privacy-practices.md`.
+- [ ] Complete the Limited Use certifications exactly as described in `docs/chrome-web-store/privacy-practices.md`.
 - [ ] Enter `https://api-production-2e11d.up.railway.app/privacy` as the public privacy policy URL.
 - [ ] Check that the public policy, dashboard declarations, listing copy, and actual behavior agree before submission.
 
@@ -67,7 +67,7 @@ Chrome's current asset and listing guidance: [Complete your listing information]
 - [ ] Set visibility to Public.
 - [ ] Select the intended countries and regions. The default all-regions setting is appropriate unless there is a legal or support reason to limit distribution.
 - [ ] Choose Free for the initial listing unless Chrome's current dashboard and the product's billing system support the intended paid plan.
-- [ ] Paste the reviewer instructions from `store/listing.md` into the Test instructions tab.
+- [ ] Paste the reviewer instructions from `docs/chrome-web-store/listing.md` into the Test instructions tab.
 - [ ] Confirm the reviewer can use a normal GitHub account and does not need publisher-supplied credentials.
 
 ## 8. Final submission

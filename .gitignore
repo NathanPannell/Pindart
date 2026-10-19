@@ -1,0 +1,21 @@
+# Dependencies and caches
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+
+# Build output from scripts/package-extension.ps1
+dist/
+.package-staging-*/
+
+# Local secrets and keys. Never commit these.
+.env
+.env.*
+*.pem
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

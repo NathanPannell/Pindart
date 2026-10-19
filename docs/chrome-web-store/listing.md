@@ -47,7 +47,7 @@ GitHub sign-in grants the OAuth `repo` scope because GitHub OAuth Apps do not of
 
 ## Suggested screenshot order and captions
 
-Upload 1280 x 800 PNG or JPEG screenshots. The prepared examples in `C:\repo\screenshot-to-issue-workspace\release\store-assets` use a local sample page and fictional GitHub data. Verify the screenshots still match the uploaded build.
+Upload 1280 x 800 PNG or JPEG screenshots. The prepared examples in [`docs/images`](../images) use a local sample page and fictional GitHub data. Verify the screenshots still match the uploaded build.
 
 1. **Select exactly what matters**: `01-select-region.png`.
 2. **Point to the problem**: `02-markup.png`.

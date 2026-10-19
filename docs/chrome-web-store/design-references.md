@@ -6,7 +6,7 @@ Researched September 23, 2026. The release UI uses original code, icons, copy, a
 
 [Jam for GitHub](https://jam.dev/integrations/github) is the closest direct comparison: capture a screenshot or recording, keep technical context with it, and create a GitHub issue in the same flow. Its public product screens guided the image-first workbench, side-by-side issue composer, small connection status, and single prominent submission action. Pindart keeps a narrower region-to-issue workflow and does not claim Jam's recordings, logs, or AI features.
 
-Local captures from Jam's public site are in `C:\repo\screenshot-to-issue-workspace\qa\reference`:
+Local captures from Jam's public site are in a private research folder (not included in this repository):
 
 | Capture | What we studied |
 | --- | --- |

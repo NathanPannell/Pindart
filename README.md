@@ -1,64 +1,241 @@
-# Pindart
+<p align="center">
+  <img src="docs/images/banner.png" alt="Pindart: point out what your app should become" width="440">
+</p>
 
-Pindart is a Chrome Manifest V3 extension for turning a selected part of a webpage into an annotated GitHub issue. The published experience uses one product-owned GitHub OAuth app and a Railway sign-in service. Users do not create or configure their own OAuth apps.
+<h1 align="center">Pindart</h1>
 
-## Use the extension
+<p align="center">
+  <strong>Point at what's wrong on a web page. Get a clear GitHub issue.</strong><br>
+  A Chrome extension that turns a marked-up screenshot into a GitHub issue in one flow.
+</p>
 
-1. Open the page you want to report and click the extension in the toolbar, or press **Ctrl+Shift+Y**.
-2. Drag over the visible page region to capture. Press **Esc** to cancel. The capture does not include browser controls or other desktop windows.
-3. Add red arrows or freehand marks in the editor, then choose **Continue**.
-4. Review the capture and its page URL, browser window size, viewport size, and capture time. Sign in with GitHub if needed, choose a repository, enter a title and optional description, then create the issue.
+<p align="center">
+  <a href="https://github.com/NathanPannell/Pindart/actions/workflows/ci.yml"><img src="https://github.com/NathanPannell/Pindart/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome Manifest V3">
+  <img src="https://img.shields.io/badge/dependencies-none-brightgreen.svg" alt="No runtime dependencies">
+</p>
 
-The screenshot is uploaded to GitHub before the issue is created. If the upload or issue creation fails, the editor keeps the current capture and form so you can retry. GitHub states that private-repository attachments normally require repository access; a copied temporary media URL can still be shared while valid, so review sensitive content before submitting.
+---
 
-## Drafts and autosave
+## What is Pindart?
 
-The current capture and its annotations are saved in extension storage. The issue title, description, repository search, and selected repository are autosaved locally as you edit and restored for the same capture. Starting a new capture clears the prior capture's issue form and annotations. A failed submission keeps the current form open.
+Writing a good bug report for something visual is tedious. You take a screenshot, crop it, draw on it in another app, save it, open GitHub, pick the repo, drag the image in, then type out which page you were on and how big your window was.
 
-The editor stays open until you close it, including after the issue is created.
+Pindart does all of that in about ten seconds:
 
-## GitHub access
+1. **Select.** Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Y</kbd> (or click the toolbar icon) and drag over the part of the page that needs attention.
+2. **Mark it up.** Draw red arrows and freehand circles to point at the exact problem.
+3. **Send it.** Pick a repository, add a title, and click **Create issue**.
 
-The extension requests the OAuth scope `repo` to list and create issues on public and private repositories the signed-in user can access. GitHub OAuth Apps do not provide an issue-only scope. The `repo` scope is broad and includes read and write access to public and private repositories and related repository data. Organization policies may require an organization owner to approve the OAuth app. See GitHub's [OAuth scope descriptions](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps) and [organization access restrictions](https://docs.github.com/en/organizations/managing-oauth-access-to-your-organizations-data/about-oauth-app-access-restrictions).
+The issue lands in GitHub with your annotated screenshot and the details a developer needs to reproduce it: the page URL, browser window size, viewport size, and capture time.
 
-The extension also requests `offline_access`. GitHub access tokens expire after eight hours and refresh tokens after six months without use. The extension refreshes tokens through Railway when needed, and replaces the refresh token each time because GitHub rotates it. If a refresh token expires or is revoked, sign in again. See GitHub's [expiring OAuth access token guidance](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#expiring-access-tokens).
-
-The extension stores the GitHub access and refresh tokens locally in Chrome extension storage. Sign out clears the extension's local session. To revoke the app's authorization as well, remove it from [GitHub's authorized applications](https://github.com/settings/applications).
-
-## Service configuration for maintainers
-
-The production sign-in API is `https://api-production-2e11d.up.railway.app/`. The GitHub OAuth App's authorization callback URL is:
-
-`https://api-production-2e11d.up.railway.app/auth/github/callback`
-
-The extension uses a second redirect after the Railway callback so Chrome can finish the login window. Chrome derives it from the extension ID:
-
-`https://<published-extension-id>.chromiumapp.org/github`
-
-Set Railway's `EXTENSION_REDIRECT_URI` to the exact value returned by `chrome.identity.getRedirectURL("github")` for the published extension. Keep the published extension ID stable. The ID is not present in this repository, so the owner must set this value after the Chrome Web Store listing has its final ID. For local OAuth testing, use the unpacked extension's ID in a separate development service configuration. Do not change the production redirect allowlist to accept arbitrary IDs.
-
-The service owner configures the product OAuth app and these Railway variables. Never commit the OAuth client secret, database credentials, or encryption key.
-
-| Railway variable | Value |
+| 1. Select a region | 2. Mark it up |
 | --- | --- |
-| `GITHUB_CLIENT_ID` | Product OAuth app's public client ID. |
-| `GITHUB_CLIENT_SECRET` | Product OAuth app's private client secret. |
-| `PUBLIC_BASE_URL` | `https://api-production-2e11d.up.railway.app` |
-| `EXTENSION_REDIRECT_URI` | Exact published extension URL shown above. |
-| `DATABASE_URL` | Pooled Neon PostgreSQL connection string. |
-| `TOKEN_ENCRYPTION_KEY` | Random 32-byte key, base64url encoded, for temporary encrypted OAuth tickets. |
-| `DATABASE_URL_UNPOOLED` | Direct Neon connection string for running migrations only. |
+| ![Dragging to select a region of a web page](docs/images/1-select.png) | ![Drawing a red arrow on the captured region](docs/images/2-markup.png) |
+| **3. Create the issue** | **4. Done** |
+| ![Choosing a repository and writing the issue title](docs/images/3-issue.png) | ![Confirmation that the issue was created](docs/images/4-done.png) |
 
-The extension's `AUTH_API_BASE_URL` in [`config.js`](config.js) and Railway host permission in [`manifest.json`](manifest.json) must match the production API host. The backend listens on Railway's injected `$PORT`. Apply the database migration before the service is considered ready. See [`backend/README.md`](backend/README.md) for backend setup, token handling, and migration commands.
+## What the issue looks like
 
-## Implementation notes
+Every issue Pindart creates follows the same simple format:
 
-- The region selector is injected into the active tab and removed before Chrome captures the visible tab. The selected region is cropped using the ratio of bitmap pixels to viewport CSS pixels, accounting for browser zoom and display scale.
-- Page content scripts do not receive GitHub tokens. GitHub API calls run in the extension background service worker.
-- The screenshot attachment upload follows the endpoint used by the [GitHub CLI](https://github.com/cli/cli/blob/trunk/internal/attachments/client.go). GitHub does not document it as a public REST endpoint, so it could change. An upload failure blocks issue creation.
-- GitHub permits images up to [10 MB](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/attaching-files). A smaller selected region may be needed if the PNG exceeds that limit.
-- For private issues, GitHub may render the attachment through a temporary signed image URL. The issue body stores the permanent `github.com/user-attachments/assets/...` URL and includes an **Open full-size screenshot** link. Do not copy the temporary `private-user-images.githubusercontent.com` URL into another issue. See [GitHub's attachment guidance](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/attaching-files).
+```markdown
+The button needs to align with the heading.
 
-## Development
+### Capture context
+- Page: https://example.com/dashboard
+- Browser window: 1280 × 800 px
+- Page viewport: 1280 × 800 px
+- Captured: Sep 23, 2026, 6:25:56 PM PDT
 
-The extension uses browser-native JavaScript and has no build step or runtime package dependencies. In `chrome://extensions`, enable Developer mode and choose **Load unpacked**, then select this repository folder. An unpacked extension usually has a different ID from the published extension. For prepublication testing, set Railway's exact `EXTENSION_REDIRECT_URI` to the unpacked ID's `chrome.identity` redirect, then replace it with the final published ID before release. A separate development Railway environment is preferable when both versions need to work at once. Run extension syntax checks with `node --check` and backend tests from `backend/` with `python -m pytest -q` after installing `requirements-dev.txt`.
+![Annotated screenshot](https://github.com/user-attachments/assets/…)
+
+[Open full-size screenshot](https://github.com/user-attachments/assets/…)
+```
+
+## Features
+
+- **Capture only what matters.** Drag-select any visible part of the page. Browser controls and other windows are never included.
+- **Sharp on any screen.** Captures account for browser zoom and high-DPI displays.
+- **Simple markup.** Arrows, freehand drawing, undo, and clear, with keyboard shortcuts (<kbd>A</kbd> arrow, <kbd>P</kbd> draw, <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo).
+- **Works with private repos.** Lists every repository you can push to, with recently used ones first and search for the rest.
+- **Never lose a draft.** Your capture, markup, title, and description are saved as you type. If something fails, nothing is lost. Just retry.
+- **Lightweight.** Plain JavaScript with no frameworks, no build step, and no runtime dependencies.
+
+## Install
+
+### From the Chrome Web Store
+
+Coming soon. The store listing is in review preparation. Watch this repository to hear when it's live.
+
+### From source
+
+1. Download this repository (**Code → Download ZIP**, then unzip it) or clone it with `git clone https://github.com/NathanPannell/Pindart.git`.
+2. In Chrome, go to `chrome://extensions`.
+3. Turn on **Developer mode** (top right).
+4. Click **Load unpacked** and choose the Pindart folder.
+5. Pin Pindart to your toolbar from the puzzle-piece menu.
+
+> [!NOTE]
+> GitHub sign-in goes through a small sign-in service that only accepts known extension IDs. A copy you load from source gets its own ID, so you'll need to run your own sign-in service until the Chrome Web Store version is available. The [setup instructions](#setup-instructions-for-agents) below walk through it step by step. They're written so an AI coding agent can follow them for you.
+
+## Privacy and permissions
+
+Pindart only does something when you ask it to. It doesn't read pages in the background, track you, or send data anywhere except GitHub and its own sign-in service.
+
+| Permission | Why Pindart needs it |
+| --- | --- |
+| `activeTab`, `scripting` | Show the selection overlay and take a screenshot of the tab you're on, only after you click the icon or press the shortcut. |
+| `storage`, `unlimitedStorage` | Keep your current capture and draft on your computer so nothing is lost. |
+| `identity` | Open the GitHub sign-in window. |
+| GitHub API access | List your repositories, upload the screenshot, and create the issue. |
+
+**About GitHub access:** Pindart asks GitHub for the `repo` scope. GitHub doesn't offer an "issues only" permission for this kind of app, so `repo` is the narrowest option that works with private repositories. Pindart only uses it to list repositories, upload screenshots, and create issues. Your sign-in is stored locally in Chrome. **Sign out** clears it, and you can revoke access anytime from [GitHub's authorized applications page](https://github.com/settings/applications).
+
+**About screenshots:** Images are uploaded to GitHub as issue attachments. In private repositories, GitHub normally requires repository access to view them, so review sensitive content before you submit.
+
+Read the full [privacy policy](https://api-production-2e11d.up.railway.app/privacy) and [security policy](SECURITY.md).
+
+## Good to know
+
+- The screenshot upload uses the same GitHub endpoint as the official [GitHub CLI](https://github.com/cli/cli). GitHub doesn't document it as a public API, so it could change.
+- GitHub limits images to 10 MB. If a capture is too large, select a smaller region.
+- The editor window stays open after an issue is created so you can view it or start another capture.
+
+## How it's built
+
+| Part | Location | What it does |
+| --- | --- | --- |
+| Chrome extension | repository root | Region selection (`select.js`), markup and issue form (`editor.*`), GitHub calls in the background worker (`background.js`, `github.js`) |
+| Sign-in service | [`backend/`](backend) | Small FastAPI app that keeps the GitHub OAuth secret off users' machines and hands the extension its tokens safely |
+| Docs | [`docs/`](docs) | [Architecture notes](docs/ARCHITECTURE.md), [design system](docs/DESIGN.md), and [Chrome Web Store materials](docs/chrome-web-store) |
+
+## Contributing
+
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the tests and try changes locally. The best way to report a visual bug in Pindart is with Pindart.
+
+## License
+
+[MIT](LICENSE) © 2026 Nathan Pannell
+
+---
+
+## Setup instructions for agents
+
+These steps are written for an AI coding agent (or a developer) setting up a fully working Pindart from source, including its own GitHub sign-in service. Follow them in order. Every value marked `<like-this>` must be replaced.
+
+### What you need from the human
+
+Ask for these up front, before you start. Everything else can be done without them.
+
+1. Access to a **GitHub account** that can create an OAuth App (Settings → Developer settings → OAuth Apps).
+2. A place to **host a small Python web service over HTTPS**. This repo includes config for [Railway](https://railway.com) (`backend/railway.json`), but any host that runs `uvicorn` works.
+3. A **PostgreSQL database**. [Neon](https://neon.tech) works well. Any Postgres 14+ is fine.
+4. **Google Chrome** on the machine where the extension will be loaded.
+
+Never commit the OAuth client secret, database URLs, or the encryption key. Store them only in the host's secret settings.
+
+### 1. Verify the code
+
+```bash
+git clone https://github.com/NathanPannell/Pindart.git
+cd Pindart
+npm run check
+npm test
+cd backend
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+cd ..
+```
+
+Requires Node 20+ and Python 3.11+. All tests should pass before you continue.
+
+### 2. Load the extension and get its redirect URL
+
+1. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the repository root.
+2. Copy the 32-letter **extension ID** shown on the Pindart card.
+3. The extension's sign-in redirect URL is `https://<extension-id>.chromiumapp.org/github`. Save it for step 5.
+
+The ID of an unpacked extension depends on its folder path. If you move the folder, the ID changes and step 5 must be updated. To pin the ID, add a `"key"` to `manifest.json` ([Chrome docs](https://developer.chrome.com/docs/extensions/reference/manifest/key)).
+
+### 3. Create the database
+
+Create a Postgres database and note two connection strings:
+
+- `DATABASE_URL`: the pooled connection string used by the running service.
+- `DATABASE_URL_UNPOOLED`: a direct connection string used only for migrations. On non-Neon hosts this can be the same value.
+
+### 4. Deploy the sign-in service (first pass)
+
+Deploy the `backend/` folder as a web service. On Railway, set the service's root directory to `backend`. The start command is already defined:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Note the service's public HTTPS origin, for example `https://pindart-auth.example.com`. This is `<service-url>`. The service won't start until step 5 is complete, which is expected.
+
+### 5. Create the GitHub OAuth App and configure the service
+
+1. Create a GitHub OAuth App at <https://github.com/settings/applications/new>:
+   - **Application name:** `Pindart` (or your own name)
+   - **Homepage URL:** this repository's URL
+   - **Authorization callback URL:** `<service-url>/auth/github/callback`
+   - Leave **Enable Device Flow** off.
+2. Copy the **Client ID** and generate a **Client secret**.
+3. Generate an encryption key:
+
+   ```bash
+   python -c "import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode().rstrip('='))"
+   ```
+
+4. Set these environment variables on the service:
+
+   | Variable | Value |
+   | --- | --- |
+   | `GITHUB_CLIENT_ID` | OAuth App client ID |
+   | `GITHUB_CLIENT_SECRET` | OAuth App client secret |
+   | `PUBLIC_BASE_URL` | `<service-url>` with no trailing slash |
+   | `EXTENSION_REDIRECT_URI` | `https://<extension-id>.chromiumapp.org/github` from step 2 |
+   | `DATABASE_URL` | Pooled Postgres connection string |
+   | `DATABASE_URL_UNPOOLED` | Direct Postgres connection string |
+   | `TOKEN_ENCRYPTION_KEY` | The key generated above |
+
+5. Run the database migration once. It's safe to repeat. From `backend/`, with `DATABASE_URL_UNPOOLED` set:
+
+   ```bash
+   python -m app.migrate
+   ```
+
+6. Redeploy, then confirm the service is ready. It should return HTTP 200:
+
+   ```bash
+   curl -i <service-url>/ready
+   ```
+
+### 6. Point the extension at your service
+
+Edit two files in the repository root so they use your values instead of the defaults:
+
+- `config.js`: set `GITHUB_CLIENT_ID` to your client ID and `AUTH_API_BASE_URL` to `<service-url>/`. The trailing slash is required.
+- `manifest.json`: in `host_permissions`, replace `https://api-production-2e11d.up.railway.app/*` with `<service-url>/*`.
+
+Then click the reload icon on the Pindart card in `chrome://extensions`.
+
+### 7. Test end to end
+
+1. Open any web page, press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Y</kbd>, and drag to select a region.
+2. Draw an arrow, click **Continue**, then **Sign in with GitHub** and approve.
+3. Pick a repository you can push to, enter a title, and click **Create issue**.
+4. Open the created issue and confirm that the screenshot and capture context appear.
+
+If sign-in fails with "returned to an unexpected address" or the service rejects the redirect, the extension ID no longer matches `EXTENSION_REDIRECT_URI`. Repeat step 2 and update the variable.
+
+### 8. Optional: package for the Chrome Web Store
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\package-extension.ps1
+```
+
+This runs the checks and tests, then writes `dist/pindart-v<version>.zip` and a SHA-256 checksum. A store-published extension gets a new permanent ID, so update `EXTENSION_REDIRECT_URI` to match it. See [`docs/chrome-web-store/release-checklist.md`](docs/chrome-web-store/release-checklist.md) for the full release process and [`backend/README.md`](backend/README.md) for the sign-in protocol.

@@ -5,10 +5,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$workspaceRoot = (Resolve-Path (Join-Path $repoRoot "..")).Path
 
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
-    $OutputDirectory = Join-Path $workspaceRoot "release"
+    $OutputDirectory = Join-Path $repoRoot "dist"
 }
 
 $manifestPath = Join-Path $repoRoot "manifest.json"
@@ -66,7 +65,7 @@ $outputRoot = (Resolve-Path -LiteralPath $OutputDirectory).Path
 $packageName = "pindart-v$($manifest.version).zip"
 $packagePath = Join-Path $outputRoot $packageName
 $checksumPath = "$packagePath.sha256"
-$stagingPath = Join-Path $workspaceRoot (".package-staging-" + [guid]::NewGuid().ToString("N"))
+$stagingPath = Join-Path $repoRoot (".package-staging-" + [guid]::NewGuid().ToString("N"))
 
 try {
     New-Item -ItemType Directory -Path $stagingPath | Out-Null
@@ -121,9 +120,9 @@ try {
 finally {
     if (Test-Path -LiteralPath $stagingPath) {
         $resolvedStaging = (Resolve-Path -LiteralPath $stagingPath).Path
-        $workspacePrefix = $workspaceRoot.TrimEnd('\') + '\'
+        $workspacePrefix = $repoRoot.TrimEnd('\') + '\'
         if (-not $resolvedStaging.StartsWith($workspacePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
-            throw "Refusing to remove staging directory outside the workspace: $resolvedStaging"
+            throw "Refusing to remove staging directory outside the repository: $resolvedStaging"
         }
         Remove-Item -LiteralPath $resolvedStaging -Recurse -Force
     }
